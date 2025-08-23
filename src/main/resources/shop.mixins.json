@@ -1,0 +1,29 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.inf1nlty.shop.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "accessor.BiomeGenBaseAccessor",
+    "accessor.EntityAccessor",
+    "accessor.SpawnerAnimalsAccessor",
+    "world.BiomeGenHellMixin",
+    "world.BlockMixin",
+    "world.EntityAnimalMixin",
+    "world.EntityPlayerMixin",
+    "world.EntityZombieMixin",
+    "world.MinecraftServerMixin",
+    "world.SpawnerAnimalsMixin",
+    "world.TileEntityMobSpawnerMixin",
+    "world.WorldServerMixin"
+  ],
+  "client": [
+    "client.GameSettingsMixin",
+    "client.GuiNewChatMixin",
+    "client.MinecraftMixin",
+    "client.SidebarPanelMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+	}
+}

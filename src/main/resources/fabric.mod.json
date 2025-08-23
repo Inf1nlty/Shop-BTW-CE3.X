@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "shop",
+  "version": "${version}",
+  "name": "Shop",
+  "description": "Adds an in-game configurable item shop (GUI, paging, hotkey, buy/sell prices) for BTW-CE 3.x.",
+  "authors": [
+    "Inf1nlty"
+  ],
+  "contact": {
+    "homepage": "https://github.com/Inf1nlty/Shop-BTW",
+    "sources": "https://github.com/Inf1nlty/Shop-BTW"
+  },
+  "license": "MIT",
+  "icon": "assets/shop/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+    ],
+    "btw:addon": [
+      "btw.community.shop.ShopAddon"
+    ]
+  },
+  "custom": {
+    "btw:addon_prefix": "SP"
+  },
+  "mixins": [
+    "shop.mixins.json"
+  ],
+  "accessWidener": "shop.accessWidener",
+  "depends": {
+    "fabricloader": ">=0.14.19",
+    "minecraft": "1.6.4"
+  }
+}
