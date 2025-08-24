@@ -4,13 +4,14 @@ import net.minecraft.src.KeyBinding;
 import org.lwjgl.input.Keyboard;
 
 /**
- * Holds custom shop key bindings (system + global).
- * Both are appended once to GameSettings via GameSettingsMixin.
+ * Holds custom shop key bindings (system + global + mailbox).
+ * All are appended once to GameSettings via GameSettingsMixin.
  */
 public final class ShopKeyBindings {
 
     public static KeyBinding OPEN_SHOP;
     public static KeyBinding OPEN_GLOBAL_SHOP;
+    public static KeyBinding OPEN_MAILBOX;
 
     private static boolean registered;
 
@@ -31,6 +32,6 @@ public final class ShopKeyBindings {
      * All custom bindings to append.
      */
     public static KeyBinding[] all() {
-        return new KeyBinding[]{ OPEN_SHOP, OPEN_GLOBAL_SHOP };
+        return new KeyBinding[]{ OPEN_SHOP, OPEN_GLOBAL_SHOP, OPEN_MAILBOX };
     }
 }

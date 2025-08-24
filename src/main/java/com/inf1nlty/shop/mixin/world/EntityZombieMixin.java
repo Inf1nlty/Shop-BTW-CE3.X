@@ -16,7 +16,7 @@ public class EntityZombieMixin {
                 && self.worldObj != null
                 && self.worldObj.provider.dimensionId == -1) {
             self.setVillager(true);
-            // 随机分配职业（0~4），原版职业数为5
+            // Randomly assign occupations (0~4), the original number of occupations is 5
             self.villagerClass = self.rand.nextInt(5);
             self.addPotionEffect(new PotionEffect(Potion.fireResistance.id, 999999 * 20, 0, true));
         }

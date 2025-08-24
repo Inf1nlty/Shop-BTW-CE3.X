@@ -8,13 +8,11 @@
     "accessor.EntityAccessor",
     "accessor.SpawnerAnimalsAccessor",
     "world.BiomeGenHellMixin",
-    "world.BlockMixin",
     "world.EntityAnimalMixin",
     "world.EntityPlayerMixin",
     "world.EntityZombieMixin",
     "world.MinecraftServerMixin",
     "world.SpawnerAnimalsMixin",
-    "world.TileEntityMobSpawnerMixin",
     "world.WorldServerMixin"
   ],
   "client": [

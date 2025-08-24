@@ -4,7 +4,9 @@ import com.inf1nlty.shop.ShopConfig;
 import com.inf1nlty.shop.ShopItem;
 import com.inf1nlty.shop.global.GlobalListing;
 import com.inf1nlty.shop.global.GlobalShopData;
+import com.inf1nlty.shop.inventory.ContainerMailbox;
 import com.inf1nlty.shop.inventory.ContainerShopPlayer;
+import com.inf1nlty.shop.server.MailboxManager;
 import com.inf1nlty.shop.util.Money;
 import com.inf1nlty.shop.util.MoneyManager;
 import com.inf1nlty.shop.util.PlayerIdentityUtil;
@@ -16,6 +18,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * System & Global shop server logic.
@@ -39,6 +42,8 @@ public class ShopNetServer {
                 case 9 -> { int lid = in.readInt(); int cnt = in.readInt(); buyGlobal(player, lid, cnt); }
                 case 10 -> { int item = in.readInt(); int meta = in.readInt(); int amt = in.readInt(); int price = in.readInt(); listGlobal(player, item, meta, amt, price); }
                 case 11 -> { int lid = in.readInt(); unlistGlobal(player, lid); }
+                case 12 -> openMailbox(player);
+                case 13 -> { int listingId = in.readInt(); int count = in.readInt(); sellToBuyOrder(player, listingId, count); }
                 default -> {}
             }
         } catch (Exception ignored) {}
@@ -167,6 +172,7 @@ public class ShopNetServer {
                 out.writeInt(gl.amount);
                 out.writeInt(gl.priceTenths);
                 out.writeUTF(gl.ownerName);
+                out.writeBoolean(gl.isBuyOrder);
                 if (gl.nbt != null) {
                     byte[] comp = compressNBT(gl.nbt);
                     out.writeBoolean(true);
@@ -188,6 +194,7 @@ public class ShopNetServer {
     private static void buyGlobal(EntityPlayerMP buyer, int listingId, int requestedCount) {
         GlobalListing gl = GlobalShopData.get(listingId);
         if (gl == null) { sendResult(buyer, "gshop.buy.not_found"); return; }
+        if (gl.isBuyOrder) { sendResult(buyer, "gshop.buyorder.not_supported"); return; }
         if (PlayerIdentityUtil.getOfflineUUID(buyer.username).equals(gl.ownerUUID)) { sendResult(buyer, "gshop.buy.self_not_allowed"); return; }
         if (requestedCount <= 0) requestedCount = 1;
         int tentativeCount = Math.min(requestedCount, gl.amount);
@@ -221,8 +228,6 @@ public class ShopNetServer {
         if (gl.nbt != null) deliver.stackTagCompound = (NBTTagCompound) gl.nbt.copy();
 
         if (!buyer.inventory.addItemStackToInventory(deliver)) {
-            // Should not happen after canFit; fallback cancel purchase (listing already reduced)
-            // Drop on ground as last resort
             buyer.dropPlayerItem(deliver);
         } else {
             MoneyManager.addTenths(buyer, -finalCost);
@@ -247,19 +252,35 @@ public class ShopNetServer {
         syncInventory(buyer);
     }
 
+    /**
+     * Handles listing a buy order (amount can be -1 for unlimited).
+     */
     private static void listGlobal(EntityPlayerMP player, int itemId, int meta, int amount, int priceTenths) {
-        if (priceTenths <= 0 || amount <= 0) { sendResult(player, "gshop.listing.add.fail_price"); return; }
+        // If priceTenths > 0, treat as sell order; else treat as buy order
+        if (priceTenths > 0) {
+            GlobalShopData.addSellOrder(player, itemId, meta, amount, priceTenths);
+        } else {
+            GlobalShopData.addBuyOrder(player, itemId, meta, amount, priceTenths);
+        }
         broadcastGlobalSnapshot();
     }
 
     private static void unlistGlobal(EntityPlayerMP player, int listingId) {
-        GlobalListing gl = GlobalShopData.get(listingId); // 只获取，不先 remove
+        GlobalListing gl = GlobalShopData.get(listingId);
         if (gl == null) {
             sendResult(player, "gshop.listing.remove.not_found|id=" + listingId);
             return;
         }
         if (!PlayerIdentityUtil.getOfflineUUID(player.username).equals(gl.ownerUUID)) {
             sendResult(player, "gshop.listing.remove.not_owner|id=" + listingId);
+            return;
+        }
+        if (gl.isBuyOrder) {
+            GlobalShopData.remove(listingId, PlayerIdentityUtil.getOfflineUUID(player.username));
+            sendResult(player, "gshop.buyorder.remove.success|id=" + gl.listingId
+                    + "|item=" + buildDisplayName(gl)
+                    + "|count=" + (gl.amount == -1 ? "unlimited" : gl.amount));
+            broadcastGlobalSnapshot();
             return;
         }
         Item item = (gl.itemId >= 0 && gl.itemId < Item.itemsList.length) ? Item.itemsList[gl.itemId] : null;
@@ -270,7 +291,6 @@ public class ShopNetServer {
             broadcastGlobalSnapshot();
             return;
         }
-        // 正式移除 listing
         GlobalListing removed = GlobalShopData.remove(listingId, PlayerIdentityUtil.getOfflineUUID(player.username));
         if (removed != null) {
             int remaining = removed.amount;
@@ -279,7 +299,6 @@ public class ShopNetServer {
                 int take = Math.min(max, remaining);
                 ItemStack stack = new ItemStack(item, take, removed.meta);
                 if (removed.nbt != null) stack.stackTagCompound = (NBTTagCompound) removed.nbt.copy();
-                // 直接丢到玩家脚下，无需检测背包
                 player.dropPlayerItem(stack);
                 remaining -= take;
             }
@@ -289,6 +308,126 @@ public class ShopNetServer {
             broadcastGlobalSnapshot();
         }
     }
+
+    // ===== Buy Order fulfillment =====
+
+    /**
+     * Opens the mailbox GUI for the player.
+     */
+    public static void openMailbox(EntityPlayerMP player) {
+        UUID playerId = PlayerIdentityUtil.getOfflineUUID(player.username);
+        ContainerMailbox c = new ContainerMailbox(player.inventory, MailboxManager.getMailbox(playerId));
+        c.windowId = (player.currentWindowId % 100) + 1;
+        player.openContainer = c;
+        sendMailboxOpen(player, c.windowId, MailboxManager.getMailbox(playerId));
+    }
+
+    private static void sendMailboxOpen(EntityPlayerMP player, int windowId, IInventory mailbox) {
+        try {
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            DataOutputStream out = new DataOutputStream(bos);
+            out.writeByte(14); // Custom code for mailbox open
+            out.writeInt(windowId);
+            // ----- 修复点：序列化收件箱内容 -----
+            for (int i = 0; i < 133; i++) {
+                ItemStack stack = mailbox.getStackInSlot(i);
+                if (stack == null) {
+                    out.writeShort(-1);
+                } else {
+                    out.writeShort((short) stack.itemID);
+                    out.writeByte(stack.stackSize);
+                    out.writeShort((short) stack.getItemDamage());
+                    out.writeBoolean(stack.stackTagCompound != null);
+                    if (stack.stackTagCompound != null) {
+                        byte[] nbt = compressNBT(stack.stackTagCompound);
+                        out.writeShort(nbt.length);
+                        out.write(nbt);
+                    }
+                }
+            }
+            send(player, bos);
+            syncInventory(player);
+        } catch (Exception ignored) {}
+    }
+
+    /**
+     * Handles selling items to a buy order.
+     * If seller's hand matches the buy order, delivers item to mailbox of buy order owner.
+     */
+    private static void sellToBuyOrder(EntityPlayerMP seller, int listingId, int count) {
+        GlobalListing order = GlobalShopData.get(listingId);
+        if (order == null || !order.isBuyOrder) {
+            sendResult(seller, "gshop.buyorder.not_found");
+            return;
+        }
+        if (PlayerIdentityUtil.getOfflineUUID(seller.username).equals(order.ownerUUID)) {
+            sendResult(seller, "gshop.buy.self_not_allowed");
+            return;
+        }
+        ItemStack hand = seller.inventory.getCurrentItem();
+        if (hand == null) {
+            sendResult(seller, "gshop.listing.add.fail_no_item");
+            return;
+        }
+        if (hand.itemID != order.itemId || hand.getItemDamage() != order.meta) {
+            sendResult(seller, "gshop.buyorder.wrong_item");
+            return;
+        }
+
+        int give;
+        if (order.amount == -1) {
+            // Unlimited orders, any quantity allowed, limited only by items on hand and count
+            give = Math.min(hand.stackSize, count);
+        } else {
+            // Limited orders, subject to order quantity restrictions
+            give = Math.min(hand.stackSize, Math.min(count, order.amount));
+            if (order.amount <= 0) {
+                sendResult(seller, "gshop.buyorder.fulfilled");
+                return;
+            }
+        }
+
+        if (give <= 0) {
+            sendResult(seller, "gshop.buyorder.sell.fail_zero|item=" + hand.getDisplayName());
+            return;
+        }
+
+        int revenue = order.priceTenths * give;
+        UUID buyerId = order.ownerUUID;
+        if (MoneyManager.getBalanceTenths(buyerId) < revenue) {
+            sendResult(seller, "gshop.buyorder.buyer_not_enough_money|buyer=" + order.ownerName);
+            return;
+        }
+
+        hand.stackSize -= give;
+        if (hand.stackSize <= 0) seller.inventory.mainInventory[seller.inventory.currentItem] = null;
+
+        ItemStack deliver = new ItemStack(hand.getItem(), give, hand.getItemDamage());
+        if (hand.stackTagCompound != null) deliver.stackTagCompound = (NBTTagCompound) hand.stackTagCompound.copy();
+        MailboxManager.deliver(buyerId, deliver);
+
+        MoneyManager.addTenths(buyerId, -revenue);
+        MoneyManager.addTenths(seller, revenue);
+
+        // Order quantity decrement and removal
+        if (order.amount != -1) {
+            order.amount -= give;
+            if (order.amount <= 0) {
+                GlobalShopData.remove(order.listingId, buyerId);
+                sendResult(seller, "gshop.buyorder.fulfilled");
+            } else {
+                GlobalShopData.save();
+            }
+        }
+        sendResult(seller, "gshop.buyorder.sell.success|item=" + deliver.getDisplayName()
+                + "|count=" + give
+                + "|buyer=" + order.ownerName);
+
+        broadcastGlobalSnapshot();
+        syncInventory(seller);
+    }
+
+    // ===== Shared Utility =====
 
     private static String buildDisplayName(GlobalListing gl) {
         Item item = (gl.itemId >= 0 && gl.itemId < Item.itemsList.length) ? Item.itemsList[gl.itemId] : null;
@@ -333,6 +472,12 @@ public class ShopNetServer {
                     out.writeShort((short) st.itemID);
                     out.writeByte(st.stackSize);
                     out.writeShort((short) st.getItemDamage());
+                    out.writeBoolean(st.stackTagCompound != null);
+                    if (st.stackTagCompound != null) {
+                        byte[] nbt = compressNBT(st.stackTagCompound);
+                        out.writeShort(nbt.length);
+                        out.write(nbt);
+                    }
                 }
             }
             send(player, bos);

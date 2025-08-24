@@ -15,8 +15,9 @@ import java.util.Base64;
 /**
  * Global listings persistence with a flat .cfg style file.
  * One line per listing:
- *   id;ownerUUID;ownerName;itemId;meta;amount;priceTenths;base64NBT
- * If no NBT, the last field is empty.
+ *   id;ownerUUID;ownerName;itemId;meta;amount;priceTenths;base64NBT;type
+ * If no NBT, the field is empty.
+ * type: "S" for sell, "B" for buy order
  */
 public final class GlobalShopData {
 
@@ -44,7 +45,7 @@ public final class GlobalShopData {
                 line = line.trim();
                 if (line.isEmpty() || line.startsWith("#")) continue;
                 String[] parts = line.split(";", -1);
-                if (parts.length < 8) continue;
+                if (parts.length < 9) continue;
                 GlobalListing g = new GlobalListing();
                 try {
                     g.listingId = Integer.parseInt(parts[0]);
@@ -59,11 +60,12 @@ public final class GlobalShopData {
                         byte[] data = Base64.getDecoder().decode(b64);
                         g.nbt = CompressedStreamTools.readCompressed(new ByteArrayInputStream(data));
                     }
+                    g.isBuyOrder = "B".equalsIgnoreCase(parts[8]);
                 } catch (Exception ex) {
                     continue; // skip malformed
                 }
                 Item it = (g.itemId >= 0 && g.itemId < Item.itemsList.length) ? Item.itemsList[g.itemId] : null;
-                if (it == null || g.amount <= 0) continue;
+                if (it == null || (!g.isBuyOrder && g.amount <= 0)) continue;
                 LIST.add(g);
                 INDEX.put(g.listingId, g);
                 BY_OWNER.computeIfAbsent(g.ownerUUID, k -> new ArrayList<>()).add(g);
@@ -89,8 +91,9 @@ public final class GlobalShopData {
                             b64 = Base64.getEncoder().encodeToString(bos.toByteArray());
                         } catch (Exception ignored) {}
                     }
+                    String type = g.isBuyOrder ? "B" : "S";
                     w.write(g.listingId + ";" + g.ownerUUID + ";" + esc(g.ownerName) + ";"
-                            + g.itemId + ";" + g.meta + ";" + g.amount + ";" + g.priceTenths + ";" + b64 + "\n");
+                            + g.itemId + ";" + g.meta + ";" + g.amount + ";" + g.priceTenths + ";" + b64 + ";" + type + "\n");
                 }
             }
         } catch (IOException ignored) {}
@@ -119,7 +122,7 @@ public final class GlobalShopData {
         return g == null ? null : g;
     }
 
-    public static synchronized GlobalListing add(EntityPlayer player, int itemId, int meta, int amount, int priceTenths) {
+    public static synchronized GlobalListing addSellOrder(EntityPlayer player, int itemId, int meta, int amount, int priceTenths) {
         GlobalListing g = new GlobalListing();
         g.listingId = ListingIdGenerator.nextId();
         g.ownerName = player.username;
@@ -132,6 +135,25 @@ public final class GlobalShopData {
         if (hand != null && hand.stackTagCompound != null) {
             g.nbt = (NBTTagCompound) hand.stackTagCompound.copy();
         }
+        g.isBuyOrder = false;
+        LIST.add(g);
+        INDEX.put(g.listingId, g);
+        BY_OWNER.computeIfAbsent(g.ownerUUID, k -> new ArrayList<>()).add(g);
+        save();
+        return g.copyShallow();
+    }
+
+    public static synchronized GlobalListing addBuyOrder(EntityPlayer player, int itemId, int meta, int amount, int priceTenths) {
+        GlobalListing g = new GlobalListing();
+        g.listingId = ListingIdGenerator.nextId();
+        g.ownerName = player.username;
+        g.ownerUUID = PlayerIdentityUtil.getOfflineUUID(player.username);
+        g.itemId = itemId;
+        g.meta = meta;
+        g.amount = amount; // -1 for unlimited
+        g.priceTenths = priceTenths; // Buy order price set by seller when selling
+        g.nbt = null;
+        g.isBuyOrder = true;
         LIST.add(g);
         INDEX.put(g.listingId, g);
         BY_OWNER.computeIfAbsent(g.ownerUUID, k -> new ArrayList<>()).add(g);

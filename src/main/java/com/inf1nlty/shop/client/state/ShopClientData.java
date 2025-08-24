@@ -13,4 +13,7 @@ public class ShopClientData {
 
     /** True only while the global shop GUI is open (enables global listing tooltip injection). */
     public static boolean inGlobalShop = false;
+
+    /** True only while the mailbox GUI is open. */
+    public static boolean inMailbox = false;
 }

@@ -10,6 +10,7 @@ import net.minecraft.src.ICommandSender;
 /**
  * /money [amount]
  * amount can have one decimal; stores tenths.
+ * Extended: /money [player] [amount] for ops to set another player's balance.
  */
 public class MoneyCommand extends CommandBase {
 
@@ -20,7 +21,7 @@ public class MoneyCommand extends CommandBase {
 
     @Override
     public String getCommandUsage(ICommandSender sender) {
-        return "/money [amount]";
+        return "/money [amount]\n/money [player] [amount]";
     }
 
     @Override
@@ -37,12 +38,14 @@ public class MoneyCommand extends CommandBase {
     public void processCommand(ICommandSender sender, String[] args) {
         if (!(sender instanceof EntityPlayer p)) return;
 
+        // Show own balance
         if (args.length == 0) {
             int bal = MoneyManager.getBalanceTenths(p);
             p.addChatMessage("shop.money.show|balance=" + Money.format(bal));
             return;
         }
 
+        // Set own balance (op only)
         if (args.length == 1) {
             boolean isOp = MinecraftServer.getServer().getConfigurationManager().isPlayerOpped(p.username);
             if (!isOp) {
@@ -59,9 +62,38 @@ public class MoneyCommand extends CommandBase {
             return;
         }
 
+        // Set another player's balance (op only)
+        if (args.length == 2) {
+            boolean isOp = MinecraftServer.getServer().getConfigurationManager().isPlayerOpped(p.username);
+            if (!isOp) {
+                p.addChatMessage("shop.money.set.no_permission");
+                return;
+            }
+            EntityPlayer target = MinecraftServer.getServer().getConfigurationManager().getPlayerEntity(args[0]);
+            if (target == null) {
+                p.addChatMessage("shop.money.set.not_found|player=" + args[0]);
+                return;
+            }
+            try {
+                int tenths = parseTenths(args[1]);
+                MoneyManager.setBalanceTenths(target, tenths);
+                // Notify both sender and target player
+                p.addChatMessage("shop.money.set.success.other|player=" + target.username + "|balance=" + Money.format(tenths));
+                target.addChatMessage("shop.money.set.success.byop|player=" + p.username + "|balance=" + Money.format(tenths));
+            } catch (NumberFormatException e) {
+                p.addChatMessage("shop.money.set.invalid");
+            }
+            return;
+        }
+
+        // Invalid usage
         p.addChatMessage(getCommandUsage(sender));
     }
 
+    /**
+     * Parses a decimal string into tenths as integer.
+     * Valid formats: "12", "12.3", "-4.5"
+     */
     private int parseTenths(String raw) {
         raw = raw.trim();
         if (raw.contains(".")) {

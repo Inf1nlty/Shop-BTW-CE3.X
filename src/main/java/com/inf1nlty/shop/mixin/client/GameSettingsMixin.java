@@ -25,16 +25,18 @@ public abstract class GameSettingsMixin {
 
     @Shadow public KeyBinding[] keyBindings;
 
-    @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/src/GameSettings;loadOptions()V"))
+    @Inject(method = "<init>*", at = @At(value = "INVOKE", target = "Lnet/minecraft/src/GameSettings;loadOptions()V"))
     private void shop$injectCustomKeys(CallbackInfo ci) {
         if (!ShopKeyBindings.markRegistered()) return;
 
         ShopKeyBindings.OPEN_SHOP = new KeyBinding("key.openShop", Keyboard.KEY_B);
         ShopKeyBindings.OPEN_GLOBAL_SHOP = new KeyBinding("key.openGlobalShop", Keyboard.KEY_G);
+        ShopKeyBindings.OPEN_MAILBOX = new KeyBinding("key.openMailbox", Keyboard.KEY_M);
 
         KeyBinding[] custom = new KeyBinding[] {
                 ShopKeyBindings.OPEN_SHOP,
-                ShopKeyBindings.OPEN_GLOBAL_SHOP
+                ShopKeyBindings.OPEN_GLOBAL_SHOP,
+                ShopKeyBindings.OPEN_MAILBOX
         };
         KeyBinding[] neu = Arrays.copyOf(keyBindings, keyBindings.length + custom.length);
         System.arraycopy(custom, 0, neu, keyBindings.length, custom.length);

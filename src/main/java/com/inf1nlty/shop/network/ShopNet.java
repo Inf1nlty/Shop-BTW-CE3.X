@@ -7,7 +7,9 @@ import com.inf1nlty.shop.client.state.ShopClientData;
 import com.inf1nlty.shop.client.state.SystemShopClientCatalog;
 import com.inf1nlty.shop.client.gui.GuiGlobalShop;
 import com.inf1nlty.shop.client.gui.GuiGlobalShop.GlobalListingClient;
+import com.inf1nlty.shop.client.gui.GuiMailbox;
 import com.inf1nlty.shop.inventory.ContainerShopPlayer;
+import com.inf1nlty.shop.inventory.ContainerMailbox;
 import net.minecraft.src.*;
 
 import java.io.*;
@@ -16,6 +18,7 @@ import java.util.List;
 
 /**
  * Unified network channel.
+ * Handles both buy/sell orders and mailbox fulfillment.
  */
 public final class ShopNet {
 
@@ -79,7 +82,15 @@ public final class ShopNet {
                                 int size = in.readByte();
                                 int dmg = in.readShort();
                                 Item item = (id >= 0 && id < Item.itemsList.length) ? Item.itemsList[id] : null;
-                                main[i] = item != null ? new ItemStack(item, size, dmg) : null;
+                                ItemStack stack = item != null ? new ItemStack(item, size, dmg) : null;
+                                boolean hasNbt = in.readBoolean();
+                                if (hasNbt && stack != null) {
+                                    int nbtLen = in.readShort();
+                                    byte[] nbt = new byte[nbtLen];
+                                    in.readFully(nbt);
+                                    stack.stackTagCompound = CompressedStreamTools.readCompressed(new ByteArrayInputStream(nbt));
+                                }
+                                main[i] = stack;
                             }
                         }
                     }
@@ -97,7 +108,8 @@ public final class ShopNet {
                         c.meta = in.readInt();
                         c.amount = in.readInt();
                         c.priceTenths = in.readInt();
-                        c.seller = in.readUTF();
+                        c.owner = in.readUTF();
+                        c.isBuyOrder = in.readBoolean();
                         boolean hasNbt = in.readBoolean();
                         if (hasNbt) {
                             int len = in.readUnsignedShort();
@@ -113,6 +125,33 @@ public final class ShopNet {
                     mc.thePlayer.openContainer = container;
                     GuiGlobalShop.setSnapshot(snapshot);
                     mc.displayGuiScreen(new GuiGlobalShop(mc.thePlayer, container));
+                }
+                case 14 -> {
+                    int windowId = in.readInt();
+                    Minecraft mc = Minecraft.getMinecraft();
+                    InventoryBasic mailboxInv = new InventoryBasic("Mailbox", false, 133);
+                    for (int i = 0; i < 133; i++) {
+                        short id = in.readShort();
+                        if (id < 0) {
+                            mailboxInv.setInventorySlotContents(i, null);
+                        } else {
+                            int size = in.readByte();
+                            int dmg = in.readShort();
+                            boolean hasNbt = in.readBoolean();
+                            ItemStack stack = new ItemStack(Item.itemsList[id], size, dmg);
+                            if (hasNbt) {
+                                int nbtLen = in.readShort();
+                                byte[] nbt = new byte[nbtLen];
+                                in.readFully(nbt);
+                                stack.stackTagCompound = CompressedStreamTools.readCompressed(new ByteArrayInputStream(nbt));
+                            }
+                            mailboxInv.setInventorySlotContents(i, stack);
+                        }
+                    }
+                    ContainerMailbox container = new ContainerMailbox(mc.thePlayer.inventory, mailboxInv);
+                    container.windowId = windowId;
+                    mc.thePlayer.openContainer = container;
+                    mc.displayGuiScreen(new GuiMailbox(mc.thePlayer, container));
                 }
                 default -> {}
             }
@@ -169,6 +208,18 @@ public final class ShopNet {
         writePacket(out -> {
             out.writeByte(11);
             out.writeInt(listingId);
+        });
+    }
+
+    public static void sendMailboxOpen() {
+        writePacket(out -> out.writeByte(12));
+    }
+
+    public static void sendSellToBuyOrder(int listingId, int count) {
+        writePacket(out -> {
+            out.writeByte(13);
+            out.writeInt(listingId);
+            out.writeInt(count);
         });
     }
 

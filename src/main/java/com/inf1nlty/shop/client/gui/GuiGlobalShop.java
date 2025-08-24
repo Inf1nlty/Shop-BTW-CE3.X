@@ -17,6 +17,8 @@ import java.util.List;
 
 /**
  * Global marketplace GUI (fixed 19 x 7 grid).
+ * Displays both sell and buy orders.
+ * Sell listings are shown with green border, buy orders with blue border.
  */
 public class GuiGlobalShop extends GuiContainer {
 
@@ -43,6 +45,8 @@ public class GuiGlobalShop extends GuiContainer {
     private static final int PLAYER_LABEL_Y = 145;
 
     private static final int HOVER_COLOR = 0x40FFFFFF;
+    private static final int SELL_BORDER_COLOR = 0xFFE000; // Yellow
+    private static final int BUY_BORDER_COLOR = 0x6034DB34; // Green
 
     private static final int BTN_PREV = 200;
     private static final int BTN_NEXT = 201;
@@ -82,8 +86,8 @@ public class GuiGlobalShop extends GuiContainer {
         }
     }
 
-    @SuppressWarnings("unchecked")
     @Override
+    @SuppressWarnings("unchecked")
     public void initGui() {
         super.initGui();
         ShopClientData.inGlobalShop = true;
@@ -165,7 +169,7 @@ public class GuiGlobalShop extends GuiContainer {
         if (stack.stackTagCompound == null) stack.stackTagCompound = new NBTTagCompound();
         stack.stackTagCompound.setInteger("GShopPriceTenths", lc.priceTenths);
         stack.stackTagCompound.setInteger("GShopAmount", lc.amount);
-        stack.stackTagCompound.setString("GShopSeller", lc.seller);
+        stack.stackTagCompound.setString("GShopSeller", lc.owner);
         hoveredStack = stack;
         hoveredListing = lc;
     }
@@ -211,10 +215,21 @@ public class GuiGlobalShop extends GuiContainer {
             if (lc.nbt != null) stack.stackTagCompound = (NBTTagCompound) lc.nbt.copy();
             itemRenderer.renderItemAndEffectIntoGUI(fontRenderer, mc.renderEngine, stack, sx, sy);
             itemRenderer.renderItemOverlayIntoGUI(fontRenderer, mc.renderEngine, stack, sx, sy);
+
+            // Draw border to indicate type
+            int borderColor = lc.isBuyOrder ? BUY_BORDER_COLOR : SELL_BORDER_COLOR;
+            drawRect(sx - 1, sy - 1, sx + 17, sy + 17, borderColor);
+
             if (local == hoverLocal) {
                 GL11.glDisable(GL11.GL_LIGHTING);
                 drawGradientRect(sx, sy, sx + 16, sy + 16, HOVER_COLOR, HOVER_COLOR);
                 GL11.glEnable(GL11.GL_LIGHTING);
+            }
+            if (lc.amount == -1) {
+                String amtStr = "∞";
+                int x = sx + 16 - fontRenderer.getStringWidth(amtStr);
+                int y = sy + 10;
+                fontRenderer.drawStringWithShadow(amtStr, x, y, 0xFFFFFF);
             }
         }
 
@@ -240,13 +255,17 @@ public class GuiGlobalShop extends GuiContainer {
         if (ShopClientData.inGlobalShop && hoveredListing != null) {
             int price = hoveredListing.priceTenths;
             int amount = hoveredListing.amount;
-            String seller = hoveredListing.seller;
-            String priceLbl = I18n.getString("gshop.price");
+            String owner = hoveredListing.owner;
+            boolean isBuyOrder = hoveredListing.isBuyOrder;
+            String typeLbl = isBuyOrder ? I18n.getString("gshop.buyorder") : I18n.getString("gshop.sellorder");
+            var4.add("§9" + typeLbl); {
+                String priceLbl = I18n.getString("gshop.price");
+                var4.add("§e" + priceLbl + ": §f" + Money.format(price));
+            }
             String amountLbl = I18n.getString("gshop.amount");
-            String sellerLbl = I18n.getString("gshop.seller");
-            var4.add("§e" + priceLbl + ": §f" + Money.format(price));
-            var4.add("§b" + amountLbl + ": §f" + amount);
-            var4.add("§d" + sellerLbl + ": §f" + seller);
+            var4.add("§b" + amountLbl + ": §f" + (amount == -1 ? "∞" : amount));
+            String ownerLbl = isBuyOrder ? I18n.getString("gshop.buyer") : I18n.getString("gshop.seller");
+            var4.add((isBuyOrder ? "§b" : "§d") + ownerLbl + ": §f" + owner);
         }
         this.func_102021_a(var4, par2, par3);
     }
@@ -286,8 +305,18 @@ public class GuiGlobalShop extends GuiContainer {
             int globalIndex = currentPage * cap + local;
             if (globalIndex < CLIENT_LISTINGS.size()) {
                 GlobalListingClient lc = CLIENT_LISTINGS.get(globalIndex);
-                int count = isShiftKeyDown() ? lc.amount : 1;
-                ShopNet.sendGlobalBuy(lc.listingId, count);
+                if (lc.isBuyOrder) {
+                    // Selling to buy order
+                    ItemStack hand = mc.thePlayer.inventory.getCurrentItem();
+                    int count = isShiftKeyDown() ? (hand != null ? hand.stackSize : 1) : 1;
+                    ShopNet.sendSellToBuyOrder(lc.listingId, count);
+                } else {
+                    // Buying from sell listing
+                    Item item = Item.itemsList[lc.itemId];
+                    int stackLimit = item != null ? item.getItemStackLimit() : 64;
+                    int count = isShiftKeyDown() ? Math.min(stackLimit, lc.amount) : 1;
+                    ShopNet.sendGlobalBuy(lc.listingId, count);
+                }
                 return;
             }
         }
@@ -373,7 +402,8 @@ public class GuiGlobalShop extends GuiContainer {
         public int meta;
         public int amount;
         public int priceTenths;
-        public String seller;
+        public String owner;
+        public boolean isBuyOrder;
         public byte[] nbtCompressed;
         public NBTTagCompound nbt;
     }

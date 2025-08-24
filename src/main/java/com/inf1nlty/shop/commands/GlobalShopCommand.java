@@ -14,14 +14,18 @@ import java.util.UUID;
  * /gshop main command:
  *  - /gshop                open global shop GUI
  *  - /gshop sell <price> [amount]
+ *  - /gshop buy <id[:meta]> <price> [amount]
  *  - /gshop my
  *  - /gshop unlist <id>
+ *  - /gshop mailbox        open mailbox GUI
  * Prices expressed with one decimal (tenths).
  * Also supports simplified commands:
- *  - /g                    open global shop GUI
- *  - /g s <price> [amount] sell
- *  - /g u <id>             unlist
- *  - /g m                  my listings
+ *  - /gs                    open global shop GUI
+ *  - /gs s <price> [amount] sell
+ *  - /gs b <id[:meta]> <price> [amount]
+ *  - /gs m                  my listings
+ *  - /gs u <id>             unlist
+ *  - /gs mb                 open mailbox
  */
 public class GlobalShopCommand extends CommandBase {
 
@@ -32,8 +36,8 @@ public class GlobalShopCommand extends CommandBase {
 
     @Override
     public String getCommandUsage(ICommandSender sender) {
-        return "/gshop | /gshop sell <price> [amount] | /gshop my | /gshop unlist <id>\n"
-                + "/g | /g s <price> [amount] | /g m | /g u <id>";
+        return "/gshop | /gshop sell <price> [amount] | /gshop buy <id[:meta]> [amount] | /gshop my | /gshop unlist <id> | /gshop mailbox\n"
+                + "/gs | /gs s <price> [amount] | /gs b <id[:meta]> [amount] | /gs m | /gs u <id> | /gs mb";
     }
 
     @Override
@@ -62,6 +66,10 @@ public class GlobalShopCommand extends CommandBase {
             case "s":
                 handleSell(player, args);
                 break;
+            case "buy":
+            case "b":
+                handleBuyOrder(player, args);
+                break;
             case "my":
             case "m":
                 handleMy(player);
@@ -69,6 +77,10 @@ public class GlobalShopCommand extends CommandBase {
             case "unlist":
             case "u":
                 handleUnlist(player, args);
+                break;
+            case "mailbox":
+            case "mb":
+                ShopNetServer.openMailbox(player);
                 break;
             default:
                 player.addChatMessage("gshop.sell.usage");
@@ -92,7 +104,7 @@ public class GlobalShopCommand extends CommandBase {
         }
         if (desired <= 0 || desired > hand.stackSize) { player.addChatMessage("gshop.listing.add.fail_stack"); return; }
 
-        GlobalListing listing = GlobalShopData.add(player, hand.itemID, hand.getItemDamage(), desired, priceTenths);
+        GlobalListing listing = GlobalShopData.addSellOrder(player, hand.itemID, hand.getItemDamage(), desired, priceTenths);
 
         hand.stackSize -= desired;
         if (hand.stackSize <= 0) player.inventory.mainInventory[player.inventory.currentItem] = null;
@@ -103,6 +115,42 @@ public class GlobalShopCommand extends CommandBase {
                 + "|price=" + Money.format(listing.priceTenths));
     }
 
+    private void handleBuyOrder(EntityPlayerMP player, String[] args) {
+        if (args.length < 3) { player.addChatMessage("gshop.buy.usage"); return; }
+        int itemId = -1; int meta = 0;
+        String idMeta = args[1];
+        if (idMeta.contains(":")) {
+            String[] parts = idMeta.split(":");
+            try {
+                itemId = Integer.parseInt(parts[0]);
+                meta = Integer.parseInt(parts[1]);
+            } catch (NumberFormatException e) { player.addChatMessage("gshop.buy.usage"); return; }
+        } else {
+            try { itemId = Integer.parseInt(idMeta); }
+            catch (NumberFormatException e) { player.addChatMessage("gshop.buy.usage"); return; }
+        }
+
+        int priceTenths;
+        try { priceTenths = parseTenths(args[2]); }
+        catch (NumberFormatException e) { player.addChatMessage("gshop.buy.usage"); return; }
+        if (priceTenths <= 0) { player.addChatMessage("gshop.buy.usage"); return; }
+
+        int amount = 1;
+        if (args.length >= 4) {
+            try { amount = Integer.parseInt(args[3]); }
+            catch (NumberFormatException e) { player.addChatMessage("gshop.buy.usage"); return; }
+        }
+        if (amount == 0) { player.addChatMessage("gshop.buy.usage"); return; }
+        if (amount < -1) amount = -1; // Unlimited buy
+
+        GlobalListing listing = GlobalShopData.addBuyOrder(player, itemId, meta, amount, priceTenths);
+
+        String display = buildDisplayName(listing);
+        player.addChatMessage("gshop.buyorder.add.success|item=" + display
+                + "|count=" + (listing.amount == -1 ? "unlimited" : listing.amount)
+                + "|price=" + Money.format(listing.priceTenths));
+    }
+
     private void handleMy(EntityPlayerMP player) {
         UUID id = PlayerIdentityUtil.getOfflineUUID(player.username);
         List<GlobalListing> mine = GlobalShopData.byOwner(id);
@@ -110,8 +158,9 @@ public class GlobalShopCommand extends CommandBase {
         for (GlobalListing g : mine) {
             player.addChatMessage("gshop.list.mine.line|id=" + g.listingId
                     + "|item=" + buildDisplayName(g)
-                    + "|amount=" + g.amount
-                    + "|price=" + Money.format(g.priceTenths));
+                    + "|amount=" + (g.amount == -1 ? "∞" : g.amount)
+                    + "|price=" + Money.format(g.priceTenths)
+                    + (g.isBuyOrder ? "|type=Buy" : "|type=Sell"));
         }
     }
 
@@ -123,10 +172,16 @@ public class GlobalShopCommand extends CommandBase {
 
         GlobalListing removed = GlobalShopData.remove(id, PlayerIdentityUtil.getOfflineUUID(player.username));
         if (removed != null) {
-            refund(player, removed);
-            player.addChatMessage("gshop.listing.remove.success|id=" + removed.listingId
-                    + "|item=" + buildDisplayName(removed)
-                    + "|count=" + removed.amount);
+            if (removed.isBuyOrder) {
+                player.addChatMessage("gshop.buyorder.remove.success|id=" + removed.listingId
+                        + "|item=" + buildDisplayName(removed)
+                        + "|count=" + (removed.amount == -1 ? "unlimited" : removed.amount));
+            } else {
+                refund(player, removed);
+                player.addChatMessage("gshop.listing.remove.success|id=" + removed.listingId
+                        + "|item=" + buildDisplayName(removed)
+                        + "|count=" + removed.amount);
+            }
         } else {
             GlobalListing gl = GlobalShopData.get(id);
             if (gl == null) player.addChatMessage("gshop.listing.remove.not_found|id=" + id);

@@ -8,6 +8,7 @@ import java.util.UUID;
  * Global shop listing record (server-side).
  * Includes optional NBT to preserve enchantments/custom data.
  * priceTenths is one-decimal currency stored as tenths.
+ * Supports both sell and buy orders.
  */
 public class GlobalListing {
 
@@ -16,9 +17,10 @@ public class GlobalListing {
     public String ownerName;
     public int itemId;
     public int meta;
-    public int amount;
+    public int amount; // Sell: available count; Buy: desired count (-1 for unlimited)
     public int priceTenths;
     public NBTTagCompound nbt; // may be null
+    public boolean isBuyOrder; // true for buy orders, false for sell orders
 
     public GlobalListing copyShallow() {
         GlobalListing g = new GlobalListing();
@@ -30,6 +32,7 @@ public class GlobalListing {
         g.amount = amount;
         g.priceTenths = priceTenths;
         g.nbt = nbt == null ? null : (NBTTagCompound) nbt.copy();
+        g.isBuyOrder = isBuyOrder;
         return g;
     }
 }
