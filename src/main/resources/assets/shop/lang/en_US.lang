@@ -52,6 +52,7 @@ gshop.buyorder.not_found=§cBuy order not found
 gshop.buyorder.wrong_item=§cWrong item in hand for this buy order
 gshop.buyorder.sell.success=§aSold {item} x{count} to {buyer}
 gshop.buyorder.buyer_not_enough_money=§cThe buyer does not have enough funds to complete the transaction! Buyer: {buyer}
+gshop.buyorder.buyer_sync=§eBuy order completed, balance change: {delta}
 gshop.buyorder.sell.fail_zero=§cCount is zero, cannot complete the transaction! Item: {item}
 gshop.buyorder.fulfilled=§bBuy order fulfilled
 gshop.buyorder=Buy Order

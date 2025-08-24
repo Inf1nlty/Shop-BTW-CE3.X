@@ -409,6 +409,21 @@ public class ShopNetServer {
         MailboxManager.deliver(buyerId, deliver);
 
         MoneyManager.addTenths(buyerId, -revenue);
+
+        EntityPlayerMP onlineBuyer = null;
+        for (Object o : seller.mcServer.getConfigurationManager().playerEntityList) {
+            EntityPlayerMP p = (EntityPlayerMP) o;
+            if (PlayerIdentityUtil.getOfflineUUID(p.username).equals(buyerId)) {
+                onlineBuyer = p;
+                break;
+            }
+        }
+        if (onlineBuyer != null) {
+            sendResult(onlineBuyer, "gshop.buyorder.buyer_sync|delta=" + Money.format(-revenue));
+            syncInventory(onlineBuyer);
+            sendGlobalSnapshot(onlineBuyer);
+        }
+
         MoneyManager.addTenths(seller, revenue);
         sendResult(seller, "gshop.buyorder.sell.success|item=" + deliver.getDisplayName()
                 + "|count=" + give
@@ -417,7 +432,6 @@ public class ShopNetServer {
         broadcastGlobalSnapshot();
         syncInventory(seller);
     }
-
     // ===== Shared Utility =====
 
     private static String buildDisplayName(GlobalListing gl) {
