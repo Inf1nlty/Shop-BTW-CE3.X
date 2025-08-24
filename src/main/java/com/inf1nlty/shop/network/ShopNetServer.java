@@ -328,7 +328,7 @@ public class ShopNetServer {
             DataOutputStream out = new DataOutputStream(bos);
             out.writeByte(14); // Custom code for mailbox open
             out.writeInt(windowId);
-            // ----- 修复点：序列化收件箱内容 -----
+
             for (int i = 0; i < 133; i++) {
                 ItemStack stack = mailbox.getStackInSlot(i);
                 if (stack == null) {
@@ -374,30 +374,32 @@ public class ShopNetServer {
             return;
         }
 
+        int buyerBalance = MoneyManager.getBalanceTenths(order.ownerUUID);
+        int maxAffordable = order.priceTenths > 0 ? (buyerBalance / order.priceTenths) : 0;
+
         int give;
         if (order.amount == -1) {
-            // Unlimited orders, any quantity allowed, limited only by items on hand and count
             give = Math.min(hand.stackSize, count);
+            give = Math.min(give, maxAffordable);
+            if (give <= 0) {
+                sendResult(seller, "gshop.buyorder.buyer_not_enough_money|buyer=" + order.ownerName);
+                return;
+            }
         } else {
-            // Limited orders, subject to order quantity restrictions
             give = Math.min(hand.stackSize, Math.min(count, order.amount));
+            give = Math.min(give, maxAffordable);
             if (order.amount <= 0) {
                 sendResult(seller, "gshop.buyorder.fulfilled");
                 return;
             }
-        }
-
-        if (give <= 0) {
-            sendResult(seller, "gshop.buyorder.sell.fail_zero|item=" + hand.getDisplayName());
-            return;
+            if (give <= 0) {
+                sendResult(seller, "gshop.buyorder.buyer_not_enough_money|buyer=" + order.ownerName);
+                return;
+            }
         }
 
         int revenue = order.priceTenths * give;
         UUID buyerId = order.ownerUUID;
-        if (MoneyManager.getBalanceTenths(buyerId) < revenue) {
-            sendResult(seller, "gshop.buyorder.buyer_not_enough_money|buyer=" + order.ownerName);
-            return;
-        }
 
         hand.stackSize -= give;
         if (hand.stackSize <= 0) seller.inventory.mainInventory[seller.inventory.currentItem] = null;
@@ -408,17 +410,6 @@ public class ShopNetServer {
 
         MoneyManager.addTenths(buyerId, -revenue);
         MoneyManager.addTenths(seller, revenue);
-
-        // Order quantity decrement and removal
-        if (order.amount != -1) {
-            order.amount -= give;
-            if (order.amount <= 0) {
-                GlobalShopData.remove(order.listingId, buyerId);
-                sendResult(seller, "gshop.buyorder.fulfilled");
-            } else {
-                GlobalShopData.save();
-            }
-        }
         sendResult(seller, "gshop.buyorder.sell.success|item=" + deliver.getDisplayName()
                 + "|count=" + give
                 + "|buyer=" + order.ownerName);

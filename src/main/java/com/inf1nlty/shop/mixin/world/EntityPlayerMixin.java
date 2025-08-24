@@ -20,7 +20,8 @@ public abstract class EntityPlayerMixin {
     @Inject(method = "writeEntityToNBT", at = @At("TAIL"))
     private void shop$write(NBTTagCompound tag, CallbackInfo ci) {
         EntityPlayer p = (EntityPlayer)(Object)this;
-        tag.setInteger("shop_money", MoneyManager.getBalanceTenths(p));
+        // Always write UUID-based balance for full offline/online sync
+        tag.setInteger("shop_money", MoneyManager.getBalanceTenths(PlayerIdentityUtil.getOfflineUUID(p.username)));
         NBTTagList mailboxList = new NBTTagList();
         InventoryBasic inv = MailboxManager.getMailbox(PlayerIdentityUtil.getOfflineUUID(p.username));
         for (int i = 0; i < inv.getSizeInventory(); i++) {
@@ -40,6 +41,7 @@ public abstract class EntityPlayerMixin {
         EntityPlayer p = (EntityPlayer)(Object)this;
         if (tag.hasKey("shop_money")) {
             int money = tag.getInteger("shop_money");
+            // Sync both EntityPlayer and UUID balance, always keep UUID as source of truth
             MoneyManager.setBalanceTenths(p, money);
             MoneyManager.setBalanceTenths(PlayerIdentityUtil.getOfflineUUID(p.username), money);
         }
