@@ -120,11 +120,15 @@ public final class ShopNet {
                         snapshot.add(c);
                     }
                     Minecraft mc = Minecraft.getMinecraft();
-                    ContainerShopPlayer container = new ContainerShopPlayer(mc.thePlayer.inventory);
-                    container.windowId = windowId;
-                    mc.thePlayer.openContainer = container;
                     GuiGlobalShop.setSnapshot(snapshot);
-                    mc.displayGuiScreen(new GuiGlobalShop(mc.thePlayer, container));
+                    if (mc.currentScreen instanceof GuiGlobalShop shopGui) {
+                        shopGui.refreshListings();
+                    } else {
+                        ContainerShopPlayer container = new ContainerShopPlayer(mc.thePlayer.inventory);
+                        container.windowId = windowId;
+                        mc.thePlayer.openContainer = container;
+                        mc.displayGuiScreen(new GuiGlobalShop(mc.thePlayer, container));
+                    }
                 }
                 case 14 -> {
                     int windowId = in.readInt();

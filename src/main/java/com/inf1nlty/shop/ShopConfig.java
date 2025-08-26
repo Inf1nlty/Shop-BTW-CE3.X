@@ -105,6 +105,7 @@ public class ShopConfig {
                 }
             }
             addSkyblockItems(list);
+            list.removeIf(si -> (si.itemID == 14 || si.itemID == 15));
         }
         list.sort(Comparator.comparingInt(o -> compositeKey(o.itemID, o.damage)));
         Map<Integer, ShopItem> map = new HashMap<>();
@@ -137,45 +138,60 @@ public class ShopConfig {
 
     private static class IdMeta { int id = -1; int meta = 0; }
 
+    /**
+     * Parses item identifier strings of the format:
+     * - id[:meta]
+     * - modid:name[:meta]
+     * Returns an IdMeta object with itemID and meta.
+     */
     private static IdMeta parseIdentifier(String raw) {
         IdMeta im = new IdMeta();
+        // Support numeric id[:meta] format
         if (raw.matches("^\\d+(?::\\d+)?$")) {
             String[] seg = raw.split(":");
             im.id = Integer.parseInt(seg[0]);
             if (seg.length == 2) im.meta = parseIntSafe(seg[1]);
             return im;
         }
-        if (raw.startsWith("minecraft:")) {
-            String[] seg = raw.split(":");
-            if (seg.length >= 2) {
-                boolean lastIsMeta = seg[seg.length - 1].matches("\\d+");
-                StringBuilder name = new StringBuilder();
-                int end = lastIsMeta ? seg.length - 1 : seg.length;
-                for (int i = 1; i < end; i++) {
-                    if (i > 1) name.append(':');
-                    name.append(seg[i]);
-                }
-                int found = findItemId(name.toString());
-                if (found >= 0) {
-                    im.id = found;
-                    if (lastIsMeta) im.meta = parseIntSafe(seg[seg.length - 1]);
-                }
+        // Support modid:name[:meta] format
+        String[] seg = raw.split(":");
+        if (seg.length >= 2) {
+            String modid = seg[0];
+            String name = seg[1];
+            int meta = 0;
+            if (seg.length == 3 && seg[2].matches("\\d+")) {
+                meta = parseIntSafe(seg[2]);
+            }
+            int found = findItemId(modid, name);
+            if (found >= 0) {
+                im.id = found;
+                im.meta = meta;
             }
         }
         return im;
     }
 
+    /**
+     * Returns parsed integer or 0 if not valid.
+     */
     private static int parseIntSafe(String s) {
         try { return Integer.parseInt(s); } catch (NumberFormatException e) { return 0; }
     }
 
-    private static int findItemId(String key) {
+    /**
+     * Finds itemID for the given modid and name.
+     * Unlocalized names are expected as modid.name.
+     */
+    private static int findItemId(String modid, String name) {
+        String searchUnlocalized = modid + "." + name;
         for (Item it : Item.itemsList) {
             if (it == null) continue;
             String un = it.getUnlocalizedName();
             if (un != null) {
                 String trimmed = un.replace("item.", "").replace("tile.", "");
-                if (trimmed.equals(key)) return it.itemID;
+                if (trimmed.equals(searchUnlocalized)) return it.itemID;
+                // Fallback: vanilla items may just use name
+                if (modid.equals("minecraft") && trimmed.equals(name)) return it.itemID;
             }
         }
         for (Block b : Block.blocksList) {
@@ -183,7 +199,8 @@ public class ShopConfig {
             String un = b.getUnlocalizedName();
             if (un != null) {
                 String trimmed = un.replace("item.", "").replace("tile.", "");
-                if (trimmed.equals(key)) return b.blockID;
+                if (trimmed.equals(searchUnlocalized)) return b.blockID;
+                if (modid.equals("minecraft") && trimmed.equals(name)) return b.blockID;
             }
         }
         return -1;

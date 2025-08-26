@@ -12,7 +12,9 @@
     "world.EntityPlayerMixin",
     "world.EntityZombieMixin",
     "world.MinecraftServerMixin",
+    "world.ServerConfigurationManagerMixin",
     "world.SpawnerAnimalsMixin",
+    "world.TeleporterMixin",
     "world.WorldServerMixin"
   ],
   "client": [

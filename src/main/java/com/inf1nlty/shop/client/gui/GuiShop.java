@@ -247,7 +247,7 @@ public class GuiShop extends GuiContainer {
 
         String money = I18n.getString(KEY_MONEY) + ": " + Money.format(ShopClientData.balance);
         int moneyX = PLAYER_BG_X + (PLAYER_BG_W - fontRenderer.getStringWidth(money)) / 2;
-        fontRenderer.drawString(money, moneyX, PLAYER_LABEL_Y, 0x3498DB);
+        fontRenderer.drawString(money, moneyX, PLAYER_LABEL_Y, 0xFF3498DB);
     }
 
     @Override
