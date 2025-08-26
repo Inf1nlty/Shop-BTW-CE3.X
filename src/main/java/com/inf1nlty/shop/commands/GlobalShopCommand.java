@@ -1,5 +1,6 @@
 package com.inf1nlty.shop.commands;
 
+import com.inf1nlty.shop.ShopConfig;
 import com.inf1nlty.shop.global.GlobalListing;
 import com.inf1nlty.shop.global.GlobalShopData;
 import com.inf1nlty.shop.util.Money;
@@ -110,9 +111,13 @@ public class GlobalShopCommand extends CommandBase {
         if (hand.stackSize <= 0) player.inventory.mainInventory[player.inventory.currentItem] = null;
 
         String display = buildDisplayName(listing);
-        player.addChatMessage("gshop.listing.add.success|item=" + display
-                + "|count=" + listing.amount
-                + "|price=" + Money.format(listing.priceTenths));
+        player.addChatMessage("gshop.listing.add.success|item=" + display + "|count=" + listing.amount + "|price=" + Money.format(listing.priceTenths));
+        if (ShopConfig.ANNOUNCE_GLOBAL_LISTING) {
+            broadcastResultAll(
+                    "gshop.listing.announce.line1.sell|player=" + player.username + "|item=" + display + "|count=" + listing.amount,
+                    "gshop.listing.announce.line2|price=" + Money.format(listing.priceTenths) + "|type=Sell"
+            );
+        }
     }
 
     private void handleBuyOrder(EntityPlayerMP player, String[] args) {
@@ -146,9 +151,22 @@ public class GlobalShopCommand extends CommandBase {
         GlobalListing listing = GlobalShopData.addBuyOrder(player, itemId, meta, amount, priceTenths);
 
         String display = buildDisplayName(listing);
-        player.addChatMessage("gshop.buyorder.add.success|item=" + display
-                + "|count=" + (listing.amount == -1 ? "unlimited" : listing.amount)
-                + "|price=" + Money.format(listing.priceTenths));
+        player.addChatMessage("gshop.buyorder.add.success|item=" + display + "|count=" + (listing.amount == -1 ? "unlimited" : listing.amount) + "|price=" + Money.format(listing.priceTenths));
+        if (ShopConfig.ANNOUNCE_GLOBAL_LISTING) {
+            broadcastResultAll(
+                    "gshop.listing.announce.line1.buy|player=" + player.username + "|item=" + display + "|count=" + listing.amount,
+                    "gshop.listing.announce.line2|price=" + Money.format(listing.priceTenths) + "|type=Buy"
+            );
+        }
+    }
+
+    private void broadcastResultAll(String... messages) {
+        for (Object o : net.minecraft.server.MinecraftServer.getServer().getConfigurationManager().playerEntityList) {
+            EntityPlayerMP online = (EntityPlayerMP) o;
+            for (String msg : messages) {
+                online.addChatMessage(msg);
+            }
+        }
     }
 
     private void handleMy(EntityPlayerMP player) {

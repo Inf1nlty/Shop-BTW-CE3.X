@@ -96,6 +96,7 @@ public final class ShopNet {
                     }
                 }
                 case 7 -> {
+                    boolean isOpenRequest = in.readBoolean();
                     int windowId = in.readInt();
                     int bal = in.readInt();
                     ShopClientData.balance = bal;
@@ -123,7 +124,7 @@ public final class ShopNet {
                     GuiGlobalShop.setSnapshot(snapshot);
                     if (mc.currentScreen instanceof GuiGlobalShop shopGui) {
                         shopGui.refreshListings();
-                    } else {
+                    } else if (isOpenRequest) {
                         ContainerShopPlayer container = new ContainerShopPlayer(mc.thePlayer.inventory);
                         container.windowId = windowId;
                         mc.thePlayer.openContainer = container;

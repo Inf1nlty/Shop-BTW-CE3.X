@@ -145,23 +145,24 @@ public class ShopNetServer {
         ContainerShopPlayer c = new ContainerShopPlayer(player.inventory);
         c.windowId = player.currentWindowId;
         player.openContainer = c;
-        sendGlobalSnapshot(player);
+        sendGlobalSnapshot(player, true);
     }
 
     public static void broadcastGlobalSnapshot() {
         for (EntityPlayerMP v : new ArrayList<>(GLOBAL_VIEWERS)) {
             if (v.openContainer == null) continue;
-            sendGlobalSnapshot(v);
+            sendGlobalSnapshot(v, false);
         }
     }
 
-    private static void sendGlobalSnapshot(EntityPlayerMP player) {
+    private static void sendGlobalSnapshot(EntityPlayerMP player, boolean isOpenRequest) {
         try {
             int bal = MoneyManager.getBalanceTenths(player);
             List<GlobalListing> listings = GlobalShopData.all();
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             DataOutputStream out = new DataOutputStream(bos);
             out.writeByte(7);
+            out.writeBoolean(isOpenRequest);
             out.writeInt(player.openContainer.windowId);
             out.writeInt(bal);
             out.writeInt(listings.size());
@@ -421,7 +422,7 @@ public class ShopNetServer {
         if (onlineBuyer != null) {
             sendResult(onlineBuyer, "gshop.buyorder.buyer_sync|delta=" + Money.format(-revenue));
             syncInventory(onlineBuyer);
-            sendGlobalSnapshot(onlineBuyer);
+            sendGlobalSnapshot(onlineBuyer, false);
         }
 
         MoneyManager.addTenths(seller, revenue);
@@ -453,7 +454,7 @@ public class ShopNetServer {
         return removed;
     }
 
-    private static void sendResult(EntityPlayerMP player, String keyWithParams) {
+    public static void sendResult(EntityPlayerMP player, String keyWithParams) {
         try {
             int bal = MoneyManager.getBalanceTenths(player);
             ByteArrayOutputStream bos = new ByteArrayOutputStream();

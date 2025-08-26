@@ -20,6 +20,7 @@ public class ShopConfig {
 
     public static boolean FORCE_SELL_UNLISTED = true;
     public static boolean IS_SKYBLOCK_MODE = false;
+    public static boolean ANNOUNCE_GLOBAL_LISTING = false;
 
     private static Map<Integer, ShopItem> itemMap = new HashMap<>();
     private static List<ShopItem> itemList = new ArrayList<>();
@@ -69,6 +70,11 @@ public class ShopConfig {
                 if (line.startsWith("skyblock_mode")) {
                     String[] kv = line.split("=", 2);
                     if (kv.length == 2) IS_SKYBLOCK_MODE = Boolean.parseBoolean(kv[1].trim());
+                    continue;
+                }
+                if (line.startsWith("announceGlobalListing")) {
+                    String[] kv = line.split("=", 2);
+                    if (kv.length == 2) ANNOUNCE_GLOBAL_LISTING = Boolean.parseBoolean(kv[1].trim());
                     continue;
                 }
                 String[] parts = line.split("=");
@@ -349,14 +355,19 @@ public class ShopConfig {
                 w.write("# System Shop Config: Supports id[:meta] or minecraft:name[:meta] format; price is one decimal (buyPrice,sellPrice)\n");
                 w.write("\n");
 
-                w.write("force_sell_unlisted=true\n");
+                w.write("force_sell_unlisted=false\n");
                 w.write("# 是否允许强制回收未设置价格的物品（true为允许，false为禁止）\n");
+                w.write("# Whether to allow forced recycling of items without prices (true = allow, false = disable)\n");
                 w.write("\n");
 
                 w.write("skyblock_mode=false\n");
                 w.write("# 是否开启空岛模式（true为允许，false为禁止）\n");
                 w.write("# Whether to enable the Sky block mode (true = allow, false = disable)\n");
                 w.write("\n");
+
+                w.write("announceGlobalListing=false\n");
+                w.write("# 是否开启全服公告全球商店上架（true为开启，false为关闭）\n");
+                w.write("# Announce global shop listings to all players (true = enabled, false = disabled)\n");
 
                 w.write("# id=buy,sell\n");
                 w.write("# id=购买价格,出售价格\n");

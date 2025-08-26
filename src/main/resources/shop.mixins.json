@@ -9,6 +9,7 @@
     "accessor.SpawnerAnimalsAccessor",
     "world.BiomeGenHellMixin",
     "world.EntityAnimalMixin",
+    "world.EntityMixin",
     "world.EntityPlayerMixin",
     "world.EntityZombieMixin",
     "world.MinecraftServerMixin",
