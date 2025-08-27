@@ -118,14 +118,18 @@ public class ShopNetServer {
         ItemStack target = player.inventory.mainInventory[slotIndex];
         if (target == null || target.itemID != itemID) { sendResult(player, "shop.failed"); return; }
         ShopItem si = ShopConfig.get(itemID, target.getItemDamage());
+        if (!ShopConfig.FORCE_SELL_UNLISTED) {
+            if (si == null || si.sellPriceTenths <= 0) {
+                sendResult(player, "shop.item_not_supported");
+                return;
+            }
+        }
         if (si == null) {
-            if (ShopConfig.FORCE_SELL_UNLISTED) {
-                int removed = removeFromSlot(player, slotIndex, count);
-                if (removed > 0) {
-                    sendResult(player, "shop.force.dispose|item=" + target.getDisplayName() + "|count=" + removed);
-                    syncInventory(player);
-                } else sendResult(player, "shop.failed");
-            } else sendResult(player, "shop.item_not_supported");
+            int removed = removeFromSlot(player, slotIndex, count);
+            if (removed > 0) {
+                sendResult(player, "shop.force.dispose|item=" + target.getDisplayName() + "|count=" + removed);
+                syncInventory(player);
+            } else sendResult(player, "shop.failed");
             return;
         }
         int removed = removeFromSlot(player, slotIndex, count);
