@@ -20,7 +20,7 @@ import java.util.Map;
 public class HandshakeServer {
     // Tracks server-side players awaiting version ACK
     private static final Map<NetServerHandler, Integer> awaitingAckTicks = new HashMap<>();
-    private static final int MAX_TICKS_FOR_ACK_WAIT = 100;
+    private static final int MAX_TICKS_FOR_ACK_WAIT = 40;
     public static final String VERSION_CHECK_CHANNEL = "shop|VC";
     public static final String VERSION_ACK_CHANNEL = "shop|VC_Ack";
 

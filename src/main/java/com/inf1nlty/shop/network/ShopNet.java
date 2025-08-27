@@ -216,6 +216,10 @@ public final class ShopNet {
         });
     }
 
+//    public static void sendGlobalRefreshRequest() {
+//        writePacket(out -> out.writeByte(15));
+//    }
+
     public static void sendMailboxOpen() {
         writePacket(out -> out.writeByte(12));
     }

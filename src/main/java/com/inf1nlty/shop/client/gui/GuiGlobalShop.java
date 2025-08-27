@@ -4,6 +4,7 @@ import com.inf1nlty.shop.client.state.ShopClientData;
 import com.inf1nlty.shop.client.state.SystemShopClientCatalog;
 import com.inf1nlty.shop.inventory.ContainerShopPlayer;
 import com.inf1nlty.shop.network.ShopNet;
+import com.inf1nlty.shop.network.ShopNetServer;
 import com.inf1nlty.shop.util.Money;
 import emi.dev.emi.emi.screen.EmiScreenManager;
 import net.minecraft.src.*;
@@ -54,6 +55,8 @@ public class GuiGlobalShop extends GuiContainer {
     private static final int TITLE_X = 15;
     private static final int TITLE_Y = 5;
     private static final int PAGE_Y = 5;
+
+    private static final int BTN_UNLIST_BASE = 1000;
 
     private static final String KEY_TITLE = "globalshop.title";
     private static final String KEY_PAGE = "shop.page";
@@ -136,6 +139,16 @@ public class GuiGlobalShop extends GuiContainer {
             currentPage++;
             mc.sndManager.playSoundFX("random.click", 1.0F, 1.0F);
             updateButtons();
+        } else if (button.id >= BTN_UNLIST_BASE) {
+            int idx = button.id - BTN_UNLIST_BASE;
+            if (idx >= 0 && idx < CLIENT_LISTINGS.size()) {
+                GlobalListingClient lc = CLIENT_LISTINGS.get(idx);
+                if (lc.owner != null && lc.owner.equals(mc.thePlayer.username)) {
+                    ShopNet.sendGlobalUnlist(lc.listingId);
+                    mc.sndManager.playSoundFX("random.pop", 1.0F, 1.0F);
+//                    ShopNet.sendGlobalRefreshRequest();
+                }
+            }
         }
     }
 
@@ -185,6 +198,7 @@ public class GuiGlobalShop extends GuiContainer {
         renderListingItems(gl, gt, mouseX, mouseY);
     }
 
+    @SuppressWarnings("unchecked")
     private void renderListingItems(int gl, int gt, int mouseXAbs, int mouseYAbs) {
         GL11.glPushMatrix();
         GL11.glEnable(GL11.GL_LIGHTING);
@@ -230,6 +244,19 @@ public class GuiGlobalShop extends GuiContainer {
                 int x = sx + 16 - fontRenderer.getStringWidth(amtStr);
                 int y = sy + 10;
                 fontRenderer.drawStringWithShadow(amtStr, x, y, 0xFFFFFF);
+            }
+            if (lc.owner != null && lc.owner.equals(mc.thePlayer.username)) {
+                int btnId = BTN_UNLIST_BASE + idx;
+                int unlistBtnWidth = 4;
+                int unlistBtnHeight = 4;
+                int btnX = sx + SLOT_SIZE - unlistBtnWidth - 1;
+                int btnY = sy + 0;
+                TinyButton unlistBtn = new TinyButton(btnId, btnX, btnY, unlistBtnWidth, unlistBtnHeight, "X", true);
+                unlistBtn.enabled = true;
+                unlistBtn.drawButton(mc, mouseXAbs, mouseYAbs);
+                if (buttonList.stream().noneMatch(b -> b instanceof TinyButton && ((TinyButton) b).id == btnId)) {
+                    buttonList.add(unlistBtn);
+                }
             }
         }
 
@@ -375,18 +402,32 @@ public class GuiGlobalShop extends GuiContainer {
     }
 
     private static class TinyButton extends GuiButton {
-        public TinyButton(int id, int x, int y, String txt) {
-            super(id, x, y, 10, 10, txt);
+        private final boolean isUnlist;
+
+        public TinyButton(int id, int x, int y, int width, int height, String txt, boolean isUnlist) {
+            super(id, x, y, width, height, txt);
+            this.isUnlist = isUnlist;
         }
+        public TinyButton(int id, int x, int y, String txt) {
+            this(id, x, y, 10, 10, txt, false); // 默认10x10
+        }
+
         @Override
         public void drawButton(Minecraft mc, int mx, int my) {
             if (!drawButton) return;
             boolean hover = mx >= xPosition && my >= yPosition && mx < xPosition + width && my < yPosition + height;
-            int bg = hover ? 0x60FFFFFF : 0x30FFFFFF;
+            int bg, textColor;
+            if (isUnlist) {
+                bg = hover ? 0x60FF2222 : 0x30FF2222;
+                textColor = hover ? 0xFFFF3333 : 0xFFAA3333;
+            } else {
+                bg = hover ? 0x60FFFFFF : 0x30FFFFFF;
+                textColor = hover ? 0xFFD700 : 0xE0E0E0;
+            }
             drawRect(xPosition, yPosition, xPosition + width, yPosition + height, bg);
             int cx = xPosition + (width - mc.fontRenderer.getStringWidth("§l" + displayString)) / 2;
             int cy = yPosition + (height - mc.fontRenderer.FONT_HEIGHT) / 2;
-            mc.fontRenderer.drawStringWithShadow("§l" + displayString, cx, cy, hover ? 0xFFD700 : 0xE0E0E0);
+            mc.fontRenderer.drawStringWithShadow("§l" + displayString, cx, cy, textColor);
         }
         @Override
         public boolean mousePressed(Minecraft mc, int mx, int my) {
@@ -412,6 +453,7 @@ public class GuiGlobalShop extends GuiContainer {
         int cap = capacityPerPage();
         totalPages = Math.max(1, (CLIENT_LISTINGS.size() + cap - 1) / cap);
         if (currentPage >= totalPages) currentPage = Math.max(0, totalPages - 1);
+        buttonList.clear();
         updateButtons();
     }
 }

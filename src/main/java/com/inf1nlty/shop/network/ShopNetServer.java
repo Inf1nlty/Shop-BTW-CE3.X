@@ -394,6 +394,8 @@ public class ShopNetServer {
             give = Math.min(hand.stackSize, Math.min(count, order.amount));
             give = Math.min(give, maxAffordable);
             if (order.amount <= 0) {
+                GlobalShopData.remove(listingId, order.ownerUUID);
+                broadcastGlobalSnapshot();
                 sendResult(seller, "gshop.buyorder.fulfilled");
                 return;
             }

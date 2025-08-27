@@ -61,10 +61,11 @@ public class HandshakeClient {
             sendAckPacket();
         }
         // Disconnect if handshake failed
-        if (ticksSinceLogin > 1 && !receivedVC) {
+        if (ticksSinceLogin > 1 && !receivedVC ) {
             mc.thePlayer.sendQueue.getNetManager().closeConnections();
             mc.displayGuiScreen(new GuiDisconnected(null, "disconnect.genericReason", "Shop mod not installed on server!"));
             mc.theWorld = null;
+            mc.thePlayer = null;
         }
     }
 
@@ -83,6 +84,7 @@ public class HandshakeClient {
                         "Shop mod version mismatch!\nServer: " + serverVersion + "\nClient: " + getShopVersion()
                 ));
                 mc.theWorld = null;
+                mc.thePlayer = null;
                 return;
             }
             // Send ACK packet
