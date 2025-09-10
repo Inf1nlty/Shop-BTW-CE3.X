@@ -1,10 +1,8 @@
 package com.inf1nlty.shop.client.gui;
 
 import com.inf1nlty.shop.client.state.ShopClientData;
-import com.inf1nlty.shop.client.state.SystemShopClientCatalog;
 import com.inf1nlty.shop.inventory.ContainerShopPlayer;
 import com.inf1nlty.shop.network.ShopNet;
-import com.inf1nlty.shop.network.ShopNetServer;
 import com.inf1nlty.shop.util.Money;
 import emi.dev.emi.emi.screen.EmiScreenManager;
 import net.minecraft.src.*;
@@ -140,9 +138,10 @@ public class GuiGlobalShop extends GuiContainer {
             mc.sndManager.playSoundFX("random.click", 1.0F, 1.0F);
             updateButtons();
         } else if (button.id >= BTN_UNLIST_BASE) {
-            int idx = button.id - BTN_UNLIST_BASE;
-            if (idx >= 0 && idx < CLIENT_LISTINGS.size()) {
-                GlobalListingClient lc = CLIENT_LISTINGS.get(idx);
+            int local = button.id - BTN_UNLIST_BASE;
+            int globalIndex = currentPage * cap + local;
+            if (globalIndex >= 0 && globalIndex < CLIENT_LISTINGS.size()) {
+                GlobalListingClient lc = CLIENT_LISTINGS.get(globalIndex);
                 if (lc.owner != null && lc.owner.equals(mc.thePlayer.username)) {
                     ShopNet.sendGlobalUnlist(lc.listingId);
                     mc.sndManager.playSoundFX("random.pop", 1.0F, 1.0F);
@@ -200,6 +199,7 @@ public class GuiGlobalShop extends GuiContainer {
 
     @SuppressWarnings("unchecked")
     private void renderListingItems(int gl, int gt, int mouseXAbs, int mouseYAbs) {
+        buttonList.removeIf(b -> b instanceof TinyButton && ((TinyButton) b).isUnlist);
         GL11.glPushMatrix();
         GL11.glEnable(GL11.GL_LIGHTING);
         GL11.glEnable(GL11.GL_DEPTH_TEST);
@@ -246,7 +246,7 @@ public class GuiGlobalShop extends GuiContainer {
                 fontRenderer.drawStringWithShadow(amtStr, x, y, 0xFFFFFF);
             }
             if (lc.owner != null && lc.owner.equals(mc.thePlayer.username)) {
-                int btnId = BTN_UNLIST_BASE + idx;
+                int btnId = BTN_UNLIST_BASE + local;
                 int unlistBtnWidth = 4;
                 int unlistBtnHeight = 4;
                 int btnX = sx + SLOT_SIZE - unlistBtnWidth - 1;
@@ -254,9 +254,7 @@ public class GuiGlobalShop extends GuiContainer {
                 TinyButton unlistBtn = new TinyButton(btnId, btnX, btnY, unlistBtnWidth, unlistBtnHeight, "X", true);
                 unlistBtn.enabled = true;
                 unlistBtn.drawButton(mc, mouseXAbs, mouseYAbs);
-                if (buttonList.stream().noneMatch(b -> b instanceof TinyButton && ((TinyButton) b).id == btnId)) {
-                    buttonList.add(unlistBtn);
-                }
+                buttonList.add(unlistBtn);
             }
         }
 

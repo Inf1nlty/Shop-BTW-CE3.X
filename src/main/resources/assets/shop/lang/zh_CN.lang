@@ -20,10 +20,10 @@ shop.money.set.not_found=§c未找到玩家：§e{player}
 shop.inventory.full=§c背包已满无法购买
 shop.page=第 {page}/{pages} 页
 key.openShop=打开商店
-key.openGlobalShop=打开全球商店
+key.openGlobalShop=打开交易行
 key.openMailbox=打开收购箱
 
-globalshop.title=全球商店
+globalshop.title=交易行
 gshop.price=单价
 gshop.amount=数量
 gshop.seller=出售者

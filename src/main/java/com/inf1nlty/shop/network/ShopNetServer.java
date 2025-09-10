@@ -436,6 +436,17 @@ public class ShopNetServer {
                 + "|count=" + give
                 + "|buyer=" + order.ownerName);
 
+        if (order.amount != -1) {
+            order.amount -= give;
+            if (order.amount <= 0) {
+                GlobalShopData.remove(listingId, order.ownerUUID);
+                broadcastGlobalSnapshot();
+                sendResult(seller, "gshop.buyorder.fulfilled");
+                syncInventory(seller);
+                return;
+            }
+        }
+
         broadcastGlobalSnapshot();
         syncInventory(seller);
     }

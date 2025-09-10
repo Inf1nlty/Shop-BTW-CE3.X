@@ -106,6 +106,8 @@ public final class GlobalShopData {
     public static synchronized List<GlobalListing> all() {
         List<GlobalListing> out = new ArrayList<>(LIST.size());
         for (GlobalListing g : LIST) out.add(g.copyShallow());
+        out.sort(Comparator.comparingInt((GlobalListing gl) -> gl.itemId)
+                .thenComparingInt(gl -> gl.meta));
         return out;
     }
 

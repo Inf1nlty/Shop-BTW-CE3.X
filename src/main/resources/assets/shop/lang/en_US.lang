@@ -20,10 +20,10 @@ shop.money.set.not_found=§cPlayer not found: §e{player}
 shop.inventory.full=§cInventory is full
 shop.page=Page {page}/{pages}
 key.openShop=Open Shop
-key.openGlobalShop=Open Global Shop
+key.openGlobalShop=Open Global Marketplace
 key.openMailbox=Open Mailbox
 
-globalshop.title=Global Shop
+globalshop.title=Global Marketplace
 gshop.price=Unit Price
 gshop.amount=Amount
 gshop.seller=Seller
