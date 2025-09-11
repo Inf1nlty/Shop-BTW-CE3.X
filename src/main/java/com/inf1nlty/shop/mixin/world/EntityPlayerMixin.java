@@ -39,11 +39,9 @@ public abstract class EntityPlayerMixin {
     @Inject(method = "readEntityFromNBT", at = @At("TAIL"))
     private void shop$read(NBTTagCompound tag, CallbackInfo ci) {
         EntityPlayer player = (EntityPlayer)(Object)this;
-        if (tag.hasKey("shop_money")) {
-            int money = tag.getInteger("shop_money");
-            // Sync both EntityPlayer and UUID balance, always keep UUID as source of truth
-            MoneyManager.setBalanceTenths(player, money);
-        }
+        int uuidBalance = MoneyManager.getBalanceTenths(PlayerIdentityUtil.getOfflineUUID(player.username));
+        MoneyManager.setBalanceTenths(player, uuidBalance);
+
         InventoryBasic inv = MailboxManager.getMailbox(PlayerIdentityUtil.getOfflineUUID(player.username));
         Arrays.fill(inv.inventoryContents, null);
         if (tag.hasKey("shop_mailbox")) {
