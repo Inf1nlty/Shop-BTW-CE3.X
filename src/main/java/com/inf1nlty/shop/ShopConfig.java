@@ -33,7 +33,7 @@ public class ShopConfig {
         ensure();
         ShopItem exact = itemMap.get(compositeKey(id, dmg));
         if (exact != null) return exact;
-        return itemMap.get(compositeKey(id, 0));
+        return itemMap.get(compositeKey(id, dmg));
     }
 
     public static synchronized List<ShopItem> getItems() {
