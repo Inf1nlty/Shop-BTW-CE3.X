@@ -265,7 +265,23 @@ public class ShopNetServer {
         if (priceTenths > 0) {
             GlobalShopData.addSellOrder(player, itemId, meta, amount, priceTenths);
         } else {
-            GlobalShopData.addBuyOrder(player, itemId, meta, amount, priceTenths);
+            if (amount <= 0) {
+                sendResult(player, "gshop.buyorder.amount_required");
+                return;
+            }
+            int buyPrice = -priceTenths;
+            if (buyPrice <= 0) {
+                sendResult(player, "gshop.buyorder.price_required");
+                return;
+            }
+            int totalCost = buyPrice * amount;
+            if (MoneyManager.getBalanceTenths(player) < totalCost) {
+                sendResult(player, "gshop.buyorder.not_enough_money_for_post");
+                return;
+            }
+            MoneyManager.addTenths(player, -totalCost);
+
+            GlobalShopData.addBuyOrder(player, itemId, meta, amount, buyPrice);
         }
         broadcastGlobalSnapshot();
     }
