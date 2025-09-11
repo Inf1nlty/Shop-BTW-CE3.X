@@ -38,7 +38,6 @@ public class MoneyManager {
     // Set balance for EntityPlayer and update UUID storage
     public static void setBalanceTenths(EntityPlayer player, int v) {
         BALANCES.put(player, v);
-        setBalanceTenths(PlayerIdentityUtil.getOfflineUUID(player.username), v);
     }
 
     // Set balance for UUID (offline/online) and persist
