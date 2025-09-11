@@ -276,8 +276,7 @@ public class ShopNetServer {
                 return;
             }
             int totalCost = buyPrice * amount;
-            UUID uuid = PlayerIdentityUtil.getOfflineUUID(player.username);
-            if (MoneyManager.getBalanceTenths(uuid) < totalCost) {
+            if (MoneyManager.getBalanceTenths(player) < totalCost) {
                 sendResult(player, "gshop.buyorder.not_enough_money_for_post");
                 return;
             }
