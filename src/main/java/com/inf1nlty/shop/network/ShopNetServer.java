@@ -237,14 +237,15 @@ public class ShopNetServer {
         } else {
             MoneyManager.addTenths(buyer, -finalCost);
             int revenue = gl.priceTenths * bought;
+            MoneyManager.addTenths(gl.ownerUUID, revenue);
             for (Object o : buyer.mcServer.getConfigurationManager().playerEntityList) {
                 EntityPlayerMP online = (EntityPlayerMP) o;
                 if (PlayerIdentityUtil.getOfflineUUID(online.username).equals(gl.ownerUUID)) {
-                    MoneyManager.addTenths(online, revenue);
                     online.addChatMessage("gshop.sale.success|buyer=" + buyer.username
                             + "|item=" + deliver.getDisplayName()
                             + "|count=" + bought
                             + "|revenue=" + Money.format(revenue));
+                    syncInventory(online); sendGlobalSnapshot(online, false);
                 }
             }
             buyer.addChatMessage("gshop.buy.success|item=" + deliver.getDisplayName()
