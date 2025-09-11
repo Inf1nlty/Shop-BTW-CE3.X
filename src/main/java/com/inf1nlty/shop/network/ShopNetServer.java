@@ -281,8 +281,7 @@ public class ShopNetServer {
                 sendResult(player, "gshop.buyorder.not_enough_money_for_post");
                 return;
             }
-            MoneyManager.addTenths(uuid, -totalCost);
-            MoneyManager.setBalanceTenths(player, MoneyManager.getBalanceTenths(uuid));
+            MoneyManager.addTenths(player, -totalCost);
 
             GlobalShopData.addBuyOrder(player, itemId, meta, amount, buyPrice);
         }
@@ -303,7 +302,7 @@ public class ShopNetServer {
             if (gl.amount > 0 && gl.priceTenths > 0) {
                 int refund = gl.priceTenths * gl.amount;
                 UUID uuid = PlayerIdentityUtil.getOfflineUUID(player.username);
-                MoneyManager.addTenths(uuid, refund);
+                MoneyManager.addTenths(player, refund);
                 sendResult(player, "gshop.buyorder.refund|amount=" + gl.amount + "|refund=" + Money.format(refund));
             }
             GlobalShopData.remove(listingId, PlayerIdentityUtil.getOfflineUUID(player.username));
