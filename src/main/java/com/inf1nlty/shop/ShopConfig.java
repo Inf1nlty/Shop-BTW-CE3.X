@@ -114,7 +114,9 @@ public class ShopConfig {
                 list.add(si);
             }
         } catch (Exception ignored) {}
-        list.sort(Comparator.comparingInt(o -> compositeKey(o.itemID, o.damage)));
+
+        // Notes, temporarily sorted by configuration file order
+//        list.sort(Comparator.comparingInt(o -> compositeKey(o.itemID, o.damage)));
         Map<Integer, ShopItem> map = new HashMap<>();
         for (ShopItem s : list) map.put(compositeKey(s.itemID, s.damage), s);
 

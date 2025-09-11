@@ -19,7 +19,8 @@ public class MoneyManager {
     // Global UUID balance table, supports offline player balance get/set
     private static final Map<UUID, Integer> BALANCES_BY_UUID = new HashMap<>();
 
-    private static final String BALANCES_FILE = "shop_balances.dat";
+    private static final String SHOP_DIR = "shop";
+    private static final String BALANCES_FILE = SHOP_DIR + "/shop_balances.dat";
 
     private MoneyManager() {}
 
@@ -65,8 +66,12 @@ public class MoneyManager {
     }
 
     public static void saveBalancesToFile() {
-        try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(BALANCES_FILE))) {
-            out.writeObject(BALANCES_BY_UUID);
+        try {
+            File dir = new File(SHOP_DIR);
+            if (!dir.exists()) dir.mkdirs();
+            try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(BALANCES_FILE))) {
+                out.writeObject(BALANCES_BY_UUID);
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
