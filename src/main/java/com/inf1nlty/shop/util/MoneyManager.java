@@ -35,7 +35,7 @@ public class MoneyManager {
         return BALANCES_BY_UUID.getOrDefault(uuid, 0);
     }
 
-    // Set balance for EntityPlayer and update UUID storage
+    // Set balance for EntityPlayer (online memory only!)
     public static void setBalanceTenths(EntityPlayer player, int v) {
         BALANCES.put(player, v);
     }
@@ -46,9 +46,11 @@ public class MoneyManager {
         saveBalancesToFile();
     }
 
-    // Add delta to EntityPlayer and update UUID storage
+    // Add delta to EntityPlayer and update UUID storage (for online player)
     public static void addTenths(EntityPlayer player, int delta) {
-        setBalanceTenths(player, getBalanceTenths(player) + delta);
+        int newBal = getBalanceTenths(player) + delta;
+        BALANCES.put(player, newBal);
+        setBalanceTenths(PlayerIdentityUtil.getOfflineUUID(player.username), newBal);
     }
 
     // Add delta to UUID, support offline player, and persist
