@@ -282,6 +282,7 @@ public class ShopNetServer {
                 return;
             }
             MoneyManager.addTenths(uuid, -totalCost);
+            MoneyManager.setBalanceTenths(player, MoneyManager.getBalanceTenths(uuid));
 
             GlobalShopData.addBuyOrder(player, itemId, meta, amount, buyPrice);
         }
