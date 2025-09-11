@@ -81,7 +81,7 @@ public class MailboxManager {
         }
     }
 
-    private static void saveMailbox(UUID playerId, InventoryBasic inv) {
+    public static void saveMailbox(UUID playerId, InventoryBasic inv) {
         try {
             File dir = new File(MAILBOX_DIR);
             if (!dir.exists()) dir.mkdirs();

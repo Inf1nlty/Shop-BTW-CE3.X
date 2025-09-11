@@ -10,6 +10,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.Arrays;
+import java.util.UUID;
 
 /**
  * Persist currency tenths.
@@ -42,9 +43,18 @@ public abstract class EntityPlayerMixin {
         int uuidBalance = MoneyManager.getBalanceTenths(PlayerIdentityUtil.getOfflineUUID(player.username));
         MoneyManager.setBalanceTenths(player, uuidBalance);
 
-        InventoryBasic inv = MailboxManager.getMailbox(PlayerIdentityUtil.getOfflineUUID(player.username));
-        Arrays.fill(inv.inventoryContents, null);
-        if (tag.hasKey("shop_mailbox")) {
+        UUID uuid = PlayerIdentityUtil.getOfflineUUID(player.username);
+        InventoryBasic inv = MailboxManager.getMailbox(uuid);
+
+        boolean mailboxFromDisk = false;
+        for (int i = 0; i < inv.getSizeInventory(); i++) {
+            if (inv.getStackInSlot(i) != null) {
+                mailboxFromDisk = true;
+                break;
+            }
+        }
+        if (!mailboxFromDisk && tag.hasKey("shop_mailbox")) {
+            Arrays.fill(inv.inventoryContents, null);
             NBTTagList mailboxList = tag.getTagList("shop_mailbox");
             for (int i = 0; i < mailboxList.tagCount(); i++) {
                 NBTTagCompound c = (NBTTagCompound) mailboxList.tagAt(i);
@@ -54,6 +64,7 @@ public abstract class EntityPlayerMixin {
                     inv.setInventorySlotContents(slot, stack);
                 }
             }
+            MailboxManager.saveMailbox(uuid, inv);
         }
     }
 }
