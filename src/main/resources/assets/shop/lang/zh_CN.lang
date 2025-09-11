@@ -54,6 +54,7 @@ gshop.buyorder.amount_required=§c上架收购订单时必须正确指定收购�
 gshop.buyorder.price_required=§c上架收购订单时价格必须大于0！
 gshop.buyorder.not_enough_money_for_post=§c余额不足，无法上架收购订单！
 gshop.buyorder.remove.success=§b收购订单 {item} x {count} (ID:{id}) 已取消
+gshop.buyorder.refund=§a收购订单剩余 {amount} 件，已退还 {refund} 金币
 gshop.buyorder.not_found=§c收购订单不存在
 gshop.buyorder.wrong_item=§c你手中的物品与该收购订单不符
 gshop.buyorder.sell.success=§a成功出售 {item} x {count} 给 {buyer}

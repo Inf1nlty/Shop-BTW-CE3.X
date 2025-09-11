@@ -54,6 +54,7 @@ gshop.buyorder.amount_required=§cYou must specify a purchase amount when postin
 gshop.buyorder.price_required=§cThe price for a buy order must be greater than zero!
 gshop.buyorder.not_enough_money_for_post=§cNot enough balance to post this buy order!
 gshop.buyorder.remove.success=§bBuy order for {item} x {count} (ID:{id}) canceled
+gshop.buyorder.refund=§aBuy order canceled with {amount} items remaining. Refunded {refund} coins.
 gshop.buyorder.not_found=§cBuy order not found
 gshop.buyorder.wrong_item=§cWrong item in hand for this buy order
 gshop.buyorder.sell.success=§aSold {item} x{count} to {buyer}

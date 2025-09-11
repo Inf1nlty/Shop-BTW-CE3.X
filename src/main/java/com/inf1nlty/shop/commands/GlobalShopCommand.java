@@ -4,6 +4,7 @@ import com.inf1nlty.shop.ShopConfig;
 import com.inf1nlty.shop.global.GlobalListing;
 import com.inf1nlty.shop.global.GlobalShopData;
 import com.inf1nlty.shop.util.Money;
+import com.inf1nlty.shop.util.MoneyManager;
 import com.inf1nlty.shop.util.PlayerIdentityUtil;
 import com.inf1nlty.shop.network.ShopNetServer;
 import net.minecraft.src.*;
@@ -122,7 +123,7 @@ public class GlobalShopCommand extends CommandBase {
 
     private void handleBuyOrder(EntityPlayerMP player, String[] args) {
         if (args.length < 3) { player.addChatMessage("gshop.buy.usage"); return; }
-        int itemId = -1; int meta = 0;
+        int itemId; int meta = 0;
         String idMeta = args[1];
         if (idMeta.contains(":")) {
             String[] parts = idMeta.split(":");
@@ -145,13 +146,19 @@ public class GlobalShopCommand extends CommandBase {
             try { amount = Integer.parseInt(args[3]); }
             catch (NumberFormatException e) { player.addChatMessage("gshop.buy.usage"); return; }
         }
-        if (amount == 0) { player.addChatMessage("gshop.buy.usage"); return; }
-        if (amount < -1) amount = -1; // Unlimited buy
+        if (amount <= 0) { player.addChatMessage("gshop.buy.usage"); return; }
+
+        int totalCost = priceTenths * amount;
+        if (MoneyManager.getBalanceTenths(player) < totalCost) {
+            player.addChatMessage("gshop.buyorder.not_enough_money_for_post");
+            return;
+        }
+        MoneyManager.addTenths(player, -totalCost);
 
         GlobalListing listing = GlobalShopData.addBuyOrder(player, itemId, meta, amount, priceTenths);
 
         String display = buildDisplayName(listing);
-        player.addChatMessage("gshop.buyorder.add.success|item=" + display + "|count=" + (listing.amount == -1 ? "unlimited" : listing.amount) + "|price=" + Money.format(listing.priceTenths));
+        player.addChatMessage("gshop.buyorder.add.success|item=" + display + "|count=" + listing.amount + "|price=" + Money.format(listing.priceTenths));
         if (ShopConfig.ANNOUNCE_GLOBAL_LISTING) {
             broadcastResultAll(
                     "gshop.listing.announce.line1.buy|player=" + player.username + "|item=" + display + "|count=" + listing.amount,
