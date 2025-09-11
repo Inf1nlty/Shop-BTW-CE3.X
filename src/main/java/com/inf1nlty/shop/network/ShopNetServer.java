@@ -297,10 +297,15 @@ public class ShopNetServer {
             return;
         }
         if (gl.isBuyOrder) {
+            if (gl.amount > 0 && gl.priceTenths > 0) {
+                int refund = gl.priceTenths * gl.amount;
+                MoneyManager.addTenths(player, refund);
+                sendResult(player, "gshop.buyorder.refund|amount=" + gl.amount + "|refund=" + Money.format(refund));
+            }
             GlobalShopData.remove(listingId, PlayerIdentityUtil.getOfflineUUID(player.username));
             sendResult(player, "gshop.buyorder.remove.success|id=" + gl.listingId
                     + "|item=" + buildDisplayName(gl)
-                    + "|count=" + (gl.amount == -1 ? "unlimited" : gl.amount));
+                    + "|count=" + gl.amount);
             broadcastGlobalSnapshot();
             return;
         }
@@ -395,20 +400,11 @@ public class ShopNetServer {
             return;
         }
 
-        int buyerBalance = MoneyManager.getBalanceTenths(order.ownerUUID);
-        int maxAffordable = order.priceTenths > 0 ? (buyerBalance / order.priceTenths) : 0;
-
         int give;
         if (order.amount == -1) {
             give = Math.min(hand.stackSize, count);
-            give = Math.min(give, maxAffordable);
-            if (give <= 0) {
-                sendResult(seller, "gshop.buyorder.buyer_not_enough_money|buyer=" + order.ownerName);
-                return;
-            }
         } else {
             give = Math.min(hand.stackSize, Math.min(count, order.amount));
-            give = Math.min(give, maxAffordable);
             if (order.amount <= 0) {
                 GlobalShopData.remove(listingId, order.ownerUUID);
                 broadcastGlobalSnapshot();
@@ -416,7 +412,7 @@ public class ShopNetServer {
                 return;
             }
             if (give <= 0) {
-                sendResult(seller, "gshop.buyorder.buyer_not_enough_money|buyer=" + order.ownerName);
+                sendResult(seller, "gshop.buyorder.fulfilled");
                 return;
             }
         }
@@ -430,8 +426,6 @@ public class ShopNetServer {
         ItemStack deliver = new ItemStack(hand.getItem(), give, hand.getItemDamage());
         if (hand.stackTagCompound != null) deliver.stackTagCompound = (NBTTagCompound) hand.stackTagCompound.copy();
         MailboxManager.deliver(buyerId, deliver);
-
-        MoneyManager.addTenths(buyerId, -revenue);
 
         EntityPlayerMP onlineBuyer = null;
         for (Object o : seller.mcServer.getConfigurationManager().playerEntityList) {

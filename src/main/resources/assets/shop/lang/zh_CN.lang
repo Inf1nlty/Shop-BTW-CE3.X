@@ -57,7 +57,6 @@ gshop.buyorder.remove.success=§b收购订单 {item} x {count} (ID:{id}) 已取�
 gshop.buyorder.not_found=§c收购订单不存在
 gshop.buyorder.wrong_item=§c你手中的物品与该收购订单不符
 gshop.buyorder.sell.success=§a成功出售 {item} x {count} 给 {buyer}
-gshop.buyorder.buyer_not_enough_money=§c收购者资金不足，无法完成交易！收购者: {buyer}
 gshop.buyorder.buyer_sync=§e完成了一笔收购，余额变动 {delta}
 gshop.buyorder.sell.fail_zero=§c数量为零，无法完成交易！物品: {item}
 gshop.buyorder.fulfilled=§b收购订单已完成
