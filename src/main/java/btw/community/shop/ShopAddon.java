@@ -11,6 +11,7 @@ import com.inf1nlty.shop.network.HandshakeClient;
 import com.inf1nlty.shop.network.HandshakeServer;
 import com.inf1nlty.shop.network.ShopNet;
 import com.inf1nlty.shop.global.GlobalShopData;
+import com.inf1nlty.shop.util.MoneyManager;
 import net.minecraft.src.EntityPlayerMP;
 import net.minecraft.src.NetServerHandler;
 
@@ -22,6 +23,7 @@ public class ShopAddon extends BTWAddon {
     public void initialize() {
         AddonHandler.logMessage(getName() + " v" + getVersionString() + " Initializing...");
         MOD_VERSION = this.getVersionString();
+        MoneyManager.loadBalancesFromFile();
         GlobalShopData.load();
         this.registerAddonCommand(new ShopCommand());
         this.registerAddonCommand(new MoneyCommand());
