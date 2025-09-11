@@ -19,11 +19,11 @@ public abstract class EntityPlayerMixin {
 
     @Inject(method = "writeEntityToNBT", at = @At("TAIL"))
     private void shop$write(NBTTagCompound tag, CallbackInfo ci) {
-        EntityPlayer p = (EntityPlayer)(Object)this;
+        EntityPlayer player = (EntityPlayer)(Object)this;
         // Always write UUID-based balance for full offline/online sync
-        tag.setInteger("shop_money", MoneyManager.getBalanceTenths(PlayerIdentityUtil.getOfflineUUID(p.username)));
+        tag.setInteger("shop_money", MoneyManager.getBalanceTenths(PlayerIdentityUtil.getOfflineUUID(player.username)));
         NBTTagList mailboxList = new NBTTagList();
-        InventoryBasic inv = MailboxManager.getMailbox(PlayerIdentityUtil.getOfflineUUID(p.username));
+        InventoryBasic inv = MailboxManager.getMailbox(PlayerIdentityUtil.getOfflineUUID(player.username));
         for (int i = 0; i < inv.getSizeInventory(); i++) {
             ItemStack stack = inv.getStackInSlot(i);
             if (stack != null) {
@@ -38,14 +38,13 @@ public abstract class EntityPlayerMixin {
 
     @Inject(method = "readEntityFromNBT", at = @At("TAIL"))
     private void shop$read(NBTTagCompound tag, CallbackInfo ci) {
-        EntityPlayer p = (EntityPlayer)(Object)this;
+        EntityPlayer player = (EntityPlayer)(Object)this;
         if (tag.hasKey("shop_money")) {
             int money = tag.getInteger("shop_money");
             // Sync both EntityPlayer and UUID balance, always keep UUID as source of truth
-            MoneyManager.setBalanceTenths(p, money);
-            MoneyManager.setBalanceTenths(PlayerIdentityUtil.getOfflineUUID(p.username), money);
+            MoneyManager.setBalanceTenths(player, money);
         }
-        InventoryBasic inv = MailboxManager.getMailbox(PlayerIdentityUtil.getOfflineUUID(p.username));
+        InventoryBasic inv = MailboxManager.getMailbox(PlayerIdentityUtil.getOfflineUUID(player.username));
         Arrays.fill(inv.inventoryContents, null);
         if (tag.hasKey("shop_mailbox")) {
             NBTTagList mailboxList = tag.getTagList("shop_mailbox");
