@@ -4,19 +4,8 @@
   "package": "com.inf1nlty.shop.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
-    "accessor.BiomeGenBaseAccessor",
-    "accessor.EntityAccessor",
-    "accessor.SpawnerAnimalsAccessor",
-    "world.BiomeGenHellMixin",
-    "world.EntityAnimalMixin",
-    "world.EntityMixin",
     "world.EntityPlayerMixin",
-    "world.EntityZombieMixin",
-    "world.MinecraftServerMixin",
-    "world.ServerConfigurationManagerMixin",
-    "world.SpawnerAnimalsMixin",
-    "world.TeleporterMixin",
-    "world.WorldServerMixin"
+    "world.MinecraftServerMixin"
   ],
   "client": [
     "client.GameSettingsMixin",
