@@ -6,6 +6,8 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.src.CommandBase;
 import net.minecraft.src.EntityPlayer;
 import net.minecraft.src.ICommandSender;
+import net.minecraft.src.ChatMessageComponent;
+import net.minecraft.src.EnumChatFormatting;
 
 /**
  * /money [amount]
@@ -41,7 +43,7 @@ public class MoneyCommand extends CommandBase {
         // Show own balance
         if (args.length == 0) {
             int bal = MoneyManager.getBalanceTenths(p);
-            p.addChatMessage("shop.money.show|balance=" + Money.format(bal));
+            p.sendChatToPlayer(ChatMessageComponent.createFromTranslationWithSubstitutions("shop.money.show", Money.format(bal)).setColor(EnumChatFormatting.YELLOW));
             return;
         }
 
@@ -49,15 +51,15 @@ public class MoneyCommand extends CommandBase {
         if (args.length == 1) {
             boolean isOp = MinecraftServer.getServer().getConfigurationManager().isPlayerOpped(p.username);
             if (!isOp) {
-                p.addChatMessage("shop.money.set.no_permission");
+                p.sendChatToPlayer(ChatMessageComponent.createFromTranslationKey("shop.money.set.no_permission").setColor(EnumChatFormatting.RED));
                 return;
             }
             try {
                 int tenths = parseTenths(args[0]);
                 MoneyManager.setBalanceTenths(p, tenths);
-                p.addChatMessage("shop.money.set.success|balance=" + Money.format(tenths));
+                p.sendChatToPlayer(ChatMessageComponent.createFromTranslationWithSubstitutions("shop.money.set.success", Money.format(tenths)).setColor(EnumChatFormatting.GREEN));
             } catch (NumberFormatException e) {
-                p.addChatMessage("shop.money.set.invalid");
+                p.sendChatToPlayer(ChatMessageComponent.createFromTranslationKey("shop.money.set.invalid").setColor(EnumChatFormatting.RED));
             }
             return;
         }
@@ -66,28 +68,28 @@ public class MoneyCommand extends CommandBase {
         if (args.length == 2) {
             boolean isOp = MinecraftServer.getServer().getConfigurationManager().isPlayerOpped(p.username);
             if (!isOp) {
-                p.addChatMessage("shop.money.set.no_permission");
+                p.sendChatToPlayer(ChatMessageComponent.createFromTranslationKey("shop.money.set.no_permission").setColor(EnumChatFormatting.RED));
                 return;
             }
             EntityPlayer target = MinecraftServer.getServer().getConfigurationManager().getPlayerEntity(args[0]);
             if (target == null) {
-                p.addChatMessage("shop.money.set.not_found|player=" + args[0]);
+                p.sendChatToPlayer(ChatMessageComponent.createFromTranslationWithSubstitutions("shop.money.set.not_found", args[0]).setColor(EnumChatFormatting.RED));
                 return;
             }
             try {
                 int tenths = parseTenths(args[1]);
                 MoneyManager.setBalanceTenths(target, tenths);
                 // Notify both sender and target player
-                p.addChatMessage("shop.money.set.success.other|player=" + target.username + "|balance=" + Money.format(tenths));
-                target.addChatMessage("shop.money.set.success.byop|player=" + p.username + "|balance=" + Money.format(tenths));
+                p.sendChatToPlayer(ChatMessageComponent.createFromTranslationWithSubstitutions("shop.money.set.success.other", target.username, Money.format(tenths)).setColor(EnumChatFormatting.GREEN));
+                target.sendChatToPlayer(ChatMessageComponent.createFromTranslationWithSubstitutions("shop.money.set.success.byop", p.username, Money.format(tenths)).setColor(EnumChatFormatting.YELLOW));
             } catch (NumberFormatException e) {
-                p.addChatMessage("shop.money.set.invalid");
+                p.sendChatToPlayer(ChatMessageComponent.createFromTranslationKey("shop.money.set.invalid").setColor(EnumChatFormatting.RED));
             }
             return;
         }
 
         // Invalid usage
-        p.addChatMessage(getCommandUsage(sender));
+        p.sendChatToPlayer(ChatMessageComponent.createFromText(getCommandUsage(sender)));
     }
 
     /**

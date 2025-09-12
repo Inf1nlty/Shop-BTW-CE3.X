@@ -6,6 +6,7 @@ import net.minecraft.src.ChatMessageComponent;
 import net.minecraft.src.CommandBase;
 import net.minecraft.src.EntityPlayerMP;
 import net.minecraft.src.ICommandSender;
+import net.minecraft.src.EnumChatFormatting;
 
 /**
  * /shop [reload]
@@ -38,10 +39,11 @@ public class ShopCommand extends CommandBase {
         if (args.length == 1 && "reload".equalsIgnoreCase(args[0])) {
             ShopConfig.forceReload();           // server authoritative list
             ShopNetServer.ensureConfig(true);   // touch timestamp
+            ChatMessageComponent msg = ChatMessageComponent.createFromTranslationKey("shop.config.reload").setColor(EnumChatFormatting.AQUA);
             if (sender instanceof EntityPlayerMP mp) {
-                mp.addChatMessage("shop.config.reload");
+                mp.sendChatToPlayer(msg);
             } else {
-                sender.sendChatToPlayer(ChatMessageComponent.createFromText("shop.config.reload"));
+                sender.sendChatToPlayer(msg);
             }
             return;
         }

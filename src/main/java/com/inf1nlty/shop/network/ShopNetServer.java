@@ -16,9 +16,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * System & Global shop server logic.
@@ -106,6 +104,7 @@ public class ShopNetServer {
             MoneyManager.addTenths(player, -cost);
             sendResult(player, "shop.buy.success|item=" + purchase.getDisplayName() + "|count=" + count + "|cost=" + Money.format(cost));
             syncInventory(player);
+            syncBalance(player);
         } else {
             // Fallback (should not reach if canFit passed)
             sendResult(player, "shop.inventory.full");
@@ -136,6 +135,7 @@ public class ShopNetServer {
         if (removed > 0) {
             int gain = si.sellPriceTenths * removed;
             if (gain > 0) MoneyManager.addTenths(player, gain);
+            syncBalance(player);
             sendResult(player, "shop.sell.success|item=" + target.getDisplayName() + "|count=" + removed + "|gain=" + Money.format(gain));
             syncInventory(player);
         } else sendResult(player, "shop.failed");
@@ -236,19 +236,22 @@ public class ShopNetServer {
             buyer.dropPlayerItem(deliver);
         } else {
             MoneyManager.addTenths(buyer, -finalCost);
+            syncBalance(buyer);
             int revenue = gl.priceTenths * bought;
             MoneyManager.addTenths(gl.ownerUUID, revenue);
             for (Object o : buyer.mcServer.getConfigurationManager().playerEntityList) {
                 EntityPlayerMP online = (EntityPlayerMP) o;
                 if (PlayerIdentityUtil.getOfflineUUID(online.username).equals(gl.ownerUUID)) {
-                    online.addChatMessage("gshop.sale.success|buyer=" + buyer.username
+                    sendResult(online, "gshop.sale.success|buyer=" + buyer.username
                             + "|item=" + deliver.getDisplayName()
                             + "|count=" + bought
                             + "|revenue=" + Money.format(revenue));
-                    syncInventory(online); sendGlobalSnapshot(online, false);
+                    syncInventory(online);
+                    sendGlobalSnapshot(online, false);
+                    syncBalance(online);
                 }
             }
-            buyer.addChatMessage("gshop.buy.success|item=" + deliver.getDisplayName()
+            sendResult(buyer, "gshop.buy.success|item=" + deliver.getDisplayName()
                     + "|count=" + bought
                     + "|cost=" + Money.format(finalCost)
                     + "|seller=" + gl.ownerName);
@@ -281,6 +284,8 @@ public class ShopNetServer {
                 return;
             }
             MoneyManager.addTenths(player, -totalCost);
+            ShopNetServer.syncBalance(player);
+            sendResult(player, "gshop.buyorder.buyer_sync|delta=" + Money.format(-totalCost));
 
             GlobalShopData.addBuyOrder(player, itemId, meta, amount, buyPrice);
         }
@@ -302,6 +307,7 @@ public class ShopNetServer {
                 int refund = gl.priceTenths * gl.amount;
                 UUID uuid = PlayerIdentityUtil.getOfflineUUID(player.username);
                 MoneyManager.addTenths(player, refund);
+                ShopNetServer.syncBalance(player);
                 sendResult(player, "gshop.buyorder.refund|amount=" + gl.amount + "|refund=" + Money.format(refund));
             }
             GlobalShopData.remove(listingId, PlayerIdentityUtil.getOfflineUUID(player.username));
@@ -438,12 +444,15 @@ public class ShopNetServer {
             }
         }
         if (onlineBuyer != null) {
-            sendResult(onlineBuyer, "gshop.buyorder.buyer_sync|delta=" + Money.format(-revenue));
             syncInventory(onlineBuyer);
             sendGlobalSnapshot(onlineBuyer, false);
         }
 
         MoneyManager.addTenths(seller, revenue);
+        ShopNetServer.syncBalance(seller);
+        if (onlineBuyer != null) {
+            ShopNetServer.syncBalance(onlineBuyer);
+        }
         sendResult(seller, "gshop.buyorder.sell.success|item=" + deliver.getDisplayName()
                 + "|count=" + give
                 + "|buyer=" + order.ownerName);
@@ -483,14 +492,91 @@ public class ShopNetServer {
         return removed;
     }
 
+    private static final Map<String, List<String>> ARG_ORDER = Map.ofEntries(
+            // Shop (system shop)
+            Map.entry("shop.buy.success", List.of("item", "count", "cost")),
+            Map.entry("shop.sell.success", List.of("item", "count", "gain")),
+            Map.entry("shop.force.dispose", List.of("item", "count")),
+            Map.entry("shop.money.show", List.of("money")),
+            Map.entry("shop.money.set.success", List.of("money")),
+            Map.entry("shop.money.set.success.other", List.of("player", "money")),
+            Map.entry("shop.money.set.success.byop", List.of("admin", "money")),
+            Map.entry("shop.money.set.not_found", List.of("player")),
+            Map.entry("shop.page", List.of("page", "pages")),
+
+            // Global shop
+            Map.entry("gshop.buy.success", List.of("cost", "seller", "item", "count")),
+            Map.entry("gshop.sale.success", List.of("buyer", "revenue", "item", "count")),
+            Map.entry("gshop.listing.add.success", List.of("item", "count", "price")),
+            Map.entry("gshop.listing.remove.success", List.of("item", "count", "id")),
+            Map.entry("gshop.listing.remove.not_owner", List.of("id")),
+            Map.entry("gshop.listing.remove.not_found", List.of("id")),
+            Map.entry("gshop.listing.announce.line1.sell", List.of("player", "item", "count")),
+            Map.entry("gshop.listing.announce.line1.buy", List.of("player", "item", "count")),
+            Map.entry("gshop.listing.announce.line2", List.of("price", "type")),
+            Map.entry("gshop.list.mine.line", List.of("id", "item", "amount", "price")),
+            Map.entry("gshop.buyorder.add.success", List.of("item", "count")),
+            Map.entry("gshop.buyorder.remove.success", List.of("item", "count", "id")),
+            Map.entry("gshop.buyorder.refund", List.of("amount", "refund")),
+            Map.entry("gshop.buyorder.sell.success", List.of("item", "count", "buyer")),
+            Map.entry("gshop.buyorder.buyer_sync", List.of("delta")),
+            Map.entry("gshop.buyorder.sell.fail_zero", List.of("item")),
+            Map.entry("gshop.unlist.item.invalid", List.of("id", "item", "count")),
+
+            // No-arg/usage/help and others
+            Map.entry("gshop.unlist.usage", List.of()),
+            Map.entry("gshop.sell.usage", List.of()),
+            Map.entry("gshop.buy.usage", List.of()),
+            Map.entry("gshop.list.mine.header", List.of()),
+            Map.entry("gshop.buyorder.fulfilled", List.of()),
+
+            Map.entry("default", List.of())
+    );
+
     public static void sendResult(EntityPlayerMP player, String keyWithParams) {
+        try {
+            MoneyManager.getBalanceTenths(player);
+            String key = keyWithParams;
+            EnumChatFormatting color = EnumChatFormatting.YELLOW;
+            Map<String, String> paramMap = new LinkedHashMap<>();
+            if (keyWithParams.contains("|")) {
+                String[] parts = keyWithParams.split("\\|");
+                key = parts[0];
+                for (int i = 1; i < parts.length; ++i) {
+                    String[] kv = parts[i].split("=", 2);
+                    if (kv.length == 2) paramMap.put(kv[0], kv[1]);
+                }
+            }
+            List<String> argNames = ARG_ORDER.getOrDefault(key, ARG_ORDER.get("default"));
+            Object[] args = argNames.stream().map(n -> paramMap.getOrDefault(n, "")).toArray();
+
+            if (key.startsWith("shop.failed") || key.contains("not_enough_money") || key.contains("not_supported") || key.contains("full") || key.contains("not_found") || key.contains("fail") || key.contains("not_owner")) {
+                color = EnumChatFormatting.RED;
+            } else if (key.contains("success") || key.contains("set") || key.contains("add") || key.contains("buy") || key.contains("sell") || key.contains("refund") || key.contains("dispose")) {
+                color = EnumChatFormatting.GREEN;
+            } else if (key.contains("force.dispose")) {
+                color = EnumChatFormatting.YELLOW;
+            } else if (key.contains("announce") || key.contains("show") || key.contains("title") || key.contains("page")) {
+                color = EnumChatFormatting.AQUA;
+            }
+
+            ChatMessageComponent msg;
+            if (args.length == 0) {
+                msg = createMessage(key, color, false, false, false);
+            } else {
+                msg = createFormattedMessage(key, color, false, false, false, args);
+            }
+            player.sendChatToPlayer(msg);
+
+        } catch (Exception ignored) {}
+    }
+
+    public static void syncBalance(EntityPlayerMP player) {
         try {
             int bal = MoneyManager.getBalanceTenths(player);
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             DataOutputStream out = new DataOutputStream(bos);
-            out.writeByte(1);
-            out.writeBoolean(true);
-            out.writeUTF(keyWithParams);
+            out.writeByte(20);
             out.writeInt(bal);
             send(player, bos);
         } catch (Exception ignored) {}
@@ -563,4 +649,25 @@ public class ShopNetServer {
         if (a == null || b == null) return false;
         return a.equals(b);
     }
+
+    public static ChatMessageComponent createMessage(String key, EnumChatFormatting color, boolean bold, boolean italic, boolean underline) {
+        ChatMessageComponent message = new ChatMessageComponent();
+        message.addKey(key);
+        message.setColor(color);
+        message.setBold(bold);
+        message.setItalic(italic);
+        message.setUnderline(underline);
+        return message;
+    }
+
+    public static ChatMessageComponent createFormattedMessage(String key, EnumChatFormatting color, boolean bold, boolean italic, boolean underline, Object... args) {
+        ChatMessageComponent message = new ChatMessageComponent();
+        message.addFormatted(key, args);
+        message.setColor(color);
+        message.setBold(bold);
+        message.setItalic(italic);
+        message.setUnderline(underline);
+        return message;
+    }
+
 }

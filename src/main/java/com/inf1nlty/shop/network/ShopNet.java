@@ -1,7 +1,6 @@
 package com.inf1nlty.shop.network;
 
 import btw.BTWAddon;
-import btw.network.packet.handler.CustomPacketHandler;
 import com.inf1nlty.shop.client.gui.GuiShop;
 import com.inf1nlty.shop.client.state.ShopClientData;
 import com.inf1nlty.shop.client.state.SystemShopClientCatalog;
@@ -28,31 +27,25 @@ public final class ShopNet {
 
     public static void register(BTWAddon addon) {
         CHANNEL = addon.getModID() + "|Shop";
-        addon.registerPacketHandler(CHANNEL, new CustomPacketHandler() {
-            @Override
-            public void handleCustomPacket(Packet250CustomPayload packet, EntityPlayer player) {
-                if (packet == null || packet.data == null) return;
-                if (player.worldObj.isRemote) client(packet, player);
-                else if (player instanceof EntityPlayerMP mp) ShopNetServer.handlePacket(packet, mp);
-            }
+        addon.registerPacketHandler(CHANNEL, (packet, player) -> {
+            if (packet == null || packet.data == null) return;
+            if (player.worldObj.isRemote) client(packet);
+            else if (player instanceof EntityPlayerMP mp) ShopNetServer.handlePacket(packet, mp);
         });
     }
 
-    private static void client(Packet250CustomPayload packet, EntityPlayer player) {
+    private static void client(Packet250CustomPayload packet) {
         try (DataInputStream in = new DataInputStream(new ByteArrayInputStream(packet.data))) {
             byte a = in.readByte();
             switch (a) {
                 case 1 -> {
                     in.readBoolean();
-                    String key = in.readUTF();
-                    int bal = in.readInt();
-                    ShopClientData.balance = bal;
-                    player.addChatMessage(key);
+                    in.readUTF();
+                    ShopClientData.balance = in.readInt();
                 }
                 case 4 -> { // system open + catalog
                     int windowId = in.readInt();
-                    int bal = in.readInt();
-                    ShopClientData.balance = bal;
+                    ShopClientData.balance = in.readInt();
                     int count = in.readInt();
                     List<SystemShopClientCatalog.Entry> list = new ArrayList<>(count);
                     for (int i = 0; i < count; i++) {
@@ -81,7 +74,7 @@ public final class ShopNet {
                             else {
                                 int size = in.readByte();
                                 int dmg = in.readShort();
-                                Item item = (id >= 0 && id < Item.itemsList.length) ? Item.itemsList[id] : null;
+                                Item item = id < Item.itemsList.length ? Item.itemsList[id] : null;
                                 ItemStack stack = item != null ? new ItemStack(item, size, dmg) : null;
                                 boolean hasNbt = in.readBoolean();
                                 if (hasNbt && stack != null) {
@@ -98,8 +91,7 @@ public final class ShopNet {
                 case 7 -> {
                     boolean isOpenRequest = in.readBoolean();
                     int windowId = in.readInt();
-                    int bal = in.readInt();
-                    ShopClientData.balance = bal;
+                    ShopClientData.balance = in.readInt();
                     int cnt = in.readInt();
                     List<GlobalListingClient> snapshot = new ArrayList<>(cnt);
                     for (int i = 0; i < cnt; i++) {
@@ -158,6 +150,8 @@ public final class ShopNet {
                     mc.thePlayer.openContainer = container;
                     mc.displayGuiScreen(new GuiMailbox(mc.thePlayer, container));
                 }
+                case 20 ->
+                    ShopClientData.balance = in.readInt();
                 default -> {}
             }
         } catch (Exception ignored) {}
@@ -215,10 +209,6 @@ public final class ShopNet {
             out.writeInt(listingId);
         });
     }
-
-//    public static void sendGlobalRefreshRequest() {
-//        writePacket(out -> out.writeByte(15));
-//    }
 
     public static void sendMailboxOpen() {
         writePacket(out -> out.writeByte(12));

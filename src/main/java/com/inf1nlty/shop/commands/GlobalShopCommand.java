@@ -90,21 +90,21 @@ public class GlobalShopCommand extends CommandBase {
     }
 
     private void handleSell(EntityPlayerMP player, String[] args) {
-        if (args.length < 2) { player.addChatMessage("gshop.sell.usage"); return; }
+        if (args.length < 2) { ShopNetServer.sendResult(player, "gshop.sell.usage"); return; }
         ItemStack hand = player.inventory.getCurrentItem();
-        if (hand == null) { player.addChatMessage("gshop.listing.add.fail_no_item"); return; }
+        if (hand == null) { ShopNetServer.sendResult(player, "gshop.listing.add.fail_no_item"); return; }
 
         int priceTenths;
         try { priceTenths = parseTenths(args[1]); }
-        catch (NumberFormatException e) { player.addChatMessage("gshop.listing.add.fail_price"); return; }
-        if (priceTenths <= 0) { player.addChatMessage("gshop.listing.add.fail_price"); return; }
+        catch (NumberFormatException e) { ShopNetServer.sendResult(player, "gshop.listing.add.fail_price"); return; }
+        if (priceTenths <= 0) { ShopNetServer.sendResult(player, "gshop.listing.add.fail_price"); return; }
 
         int desired = hand.stackSize;
         if (args.length >= 3) {
             try { desired = Integer.parseInt(args[2]); }
-            catch (NumberFormatException e) { player.addChatMessage("gshop.listing.add.fail_amount"); return; }
+            catch (NumberFormatException e) { ShopNetServer.sendResult(player, "gshop.listing.add.fail_amount"); return; }
         }
-        if (desired <= 0 || desired > hand.stackSize) { player.addChatMessage("gshop.listing.add.fail_stack"); return; }
+        if (desired <= 0 || desired > hand.stackSize) { ShopNetServer.sendResult(player, "gshop.listing.add.fail_stack"); return; }
 
         GlobalListing listing = GlobalShopData.addSellOrder(player, hand.itemID, hand.getItemDamage(), desired, priceTenths);
 
@@ -112,7 +112,7 @@ public class GlobalShopCommand extends CommandBase {
         if (hand.stackSize <= 0) player.inventory.mainInventory[player.inventory.currentItem] = null;
 
         String display = buildDisplayName(listing);
-        player.addChatMessage("gshop.listing.add.success|item=" + display + "|count=" + listing.amount + "|price=" + Money.format(listing.priceTenths));
+        ShopNetServer.sendResult(player, "gshop.listing.add.success|item=" + display + "|count=" + listing.amount + "|price=" + Money.format(listing.priceTenths));
         if (ShopConfig.ANNOUNCE_GLOBAL_LISTING) {
             broadcastResultAll(
                     "gshop.listing.announce.line1.sell|player=" + player.username + "|item=" + display + "|count=" + listing.amount,
@@ -121,8 +121,9 @@ public class GlobalShopCommand extends CommandBase {
         }
     }
 
+
     private void handleBuyOrder(EntityPlayerMP player, String[] args) {
-        if (args.length < 3) { player.addChatMessage("gshop.buy.usage"); return; }
+        if (args.length < 3) { ShopNetServer.sendResult(player, "gshop.buy.usage"); return; }
         int itemId; int meta = 0;
         String idMeta = args[1];
         if (idMeta.contains(":")) {
@@ -130,35 +131,36 @@ public class GlobalShopCommand extends CommandBase {
             try {
                 itemId = Integer.parseInt(parts[0]);
                 meta = Integer.parseInt(parts[1]);
-            } catch (NumberFormatException e) { player.addChatMessage("gshop.buy.usage"); return; }
+            } catch (NumberFormatException e) { ShopNetServer.sendResult(player, "gshop.buy.usage"); return; }
         } else {
             try { itemId = Integer.parseInt(idMeta); }
-            catch (NumberFormatException e) { player.addChatMessage("gshop.buy.usage"); return; }
+            catch (NumberFormatException e) { ShopNetServer.sendResult(player, "gshop.buy.usage"); return; }
         }
 
         int priceTenths;
         try { priceTenths = parseTenths(args[2]); }
-        catch (NumberFormatException e) { player.addChatMessage("gshop.buy.usage"); return; }
-        if (priceTenths <= 0) { player.addChatMessage("gshop.buy.usage"); return; }
+        catch (NumberFormatException e) { ShopNetServer.sendResult(player, "gshop.buy.usage"); return; }
+        if (priceTenths <= 0) { ShopNetServer.sendResult(player, "gshop.buy.usage"); return; }
 
         int amount = 1;
         if (args.length >= 4) {
             try { amount = Integer.parseInt(args[3]); }
-            catch (NumberFormatException e) { player.addChatMessage("gshop.buy.usage"); return; }
+            catch (NumberFormatException e) { ShopNetServer.sendResult(player, "gshop.buy.usage"); return; }
         }
-        if (amount <= 0) { player.addChatMessage("gshop.buy.usage"); return; }
+        if (amount <= 0) { ShopNetServer.sendResult(player, "gshop.buy.usage"); return; }
 
         int totalCost = priceTenths * amount;
         if (MoneyManager.getBalanceTenths(player) < totalCost) {
-            player.addChatMessage("gshop.buyorder.not_enough_money_for_post");
+            ShopNetServer.sendResult(player, "gshop.buyorder.not_enough_money_for_post");
             return;
         }
         MoneyManager.addTenths(player, -totalCost);
+        ShopNetServer.syncBalance(player);
 
         GlobalListing listing = GlobalShopData.addBuyOrder(player, itemId, meta, amount, priceTenths);
 
         String display = buildDisplayName(listing);
-        player.addChatMessage("gshop.buyorder.add.success|item=" + display + "|count=" + listing.amount + "|price=" + Money.format(listing.priceTenths));
+        ShopNetServer.sendResult(player, "gshop.buyorder.add.success|item=" + display + "|count=" + listing.amount + "|price=" + Money.format(listing.priceTenths));
         if (ShopConfig.ANNOUNCE_GLOBAL_LISTING) {
             broadcastResultAll(
                     "gshop.listing.announce.line1.buy|player=" + player.username + "|item=" + display + "|count=" + listing.amount,
@@ -171,7 +173,7 @@ public class GlobalShopCommand extends CommandBase {
         for (Object o : net.minecraft.server.MinecraftServer.getServer().getConfigurationManager().playerEntityList) {
             EntityPlayerMP online = (EntityPlayerMP) o;
             for (String msg : messages) {
-                online.addChatMessage(msg);
+                ShopNetServer.sendResult(online, msg);
             }
         }
     }
@@ -179,9 +181,9 @@ public class GlobalShopCommand extends CommandBase {
     private void handleMy(EntityPlayerMP player) {
         UUID id = PlayerIdentityUtil.getOfflineUUID(player.username);
         List<GlobalListing> mine = GlobalShopData.byOwner(id);
-        player.addChatMessage("gshop.list.mine.header");
+        ShopNetServer.sendResult(player, "gshop.list.mine.header");
         for (GlobalListing g : mine) {
-            player.addChatMessage("gshop.list.mine.line|id=" + g.listingId
+            ShopNetServer.sendResult(player, "gshop.list.mine.line|id=" + g.listingId
                     + "|item=" + buildDisplayName(g)
                     + "|amount=" + (g.amount == -1 ? "∞" : g.amount)
                     + "|price=" + Money.format(g.priceTenths)
@@ -190,27 +192,27 @@ public class GlobalShopCommand extends CommandBase {
     }
 
     private void handleUnlist(EntityPlayerMP player, String[] args) {
-        if (args.length < 2) { player.addChatMessage("gshop.unlist.usage"); return; }
+        if (args.length < 2) { ShopNetServer.sendResult(player, "gshop.unlist.usage"); return; }
         int id;
         try { id = Integer.parseInt(args[1]); }
-        catch (NumberFormatException e) { player.addChatMessage("gshop.unlist.usage"); return; }
+        catch (NumberFormatException e) { ShopNetServer.sendResult(player, "gshop.unlist.usage"); return; }
 
         GlobalListing removed = GlobalShopData.remove(id, PlayerIdentityUtil.getOfflineUUID(player.username));
         if (removed != null) {
             if (removed.isBuyOrder) {
-                player.addChatMessage("gshop.buyorder.remove.success|id=" + removed.listingId
+                ShopNetServer.sendResult(player, "gshop.buyorder.remove.success|id=" + removed.listingId
                         + "|item=" + buildDisplayName(removed)
                         + "|count=" + (removed.amount == -1 ? "unlimited" : removed.amount));
             } else {
                 refund(player, removed);
-                player.addChatMessage("gshop.listing.remove.success|id=" + removed.listingId
+                ShopNetServer.sendResult(player, "gshop.listing.remove.success|id=" + removed.listingId
                         + "|item=" + buildDisplayName(removed)
                         + "|count=" + removed.amount);
             }
         } else {
             GlobalListing gl = GlobalShopData.get(id);
-            if (gl == null) player.addChatMessage("gshop.listing.remove.not_found|id=" + id);
-            else player.addChatMessage("gshop.listing.remove.not_owner|id=" + id);
+            if (gl == null) ShopNetServer.sendResult(player, "gshop.listing.remove.not_found|id=" + id);
+            else ShopNetServer.sendResult(player, "gshop.listing.remove.not_owner|id=" + id);
         }
     }
 
