@@ -102,7 +102,7 @@ public class ShopNetServer {
 
         if (player.inventory.addItemStackToInventory(purchase)) {
             MoneyManager.addTenths(player, -cost);
-            sendResult(player, "shop.buy.success|item=" + purchase.getDisplayName() + "|count=" + count + "|cost=" + Money.format(cost));
+            sendResult(player, "shop.buy.success|itemID=" + purchase.itemID + "|meta=" + purchase.getItemDamage() + "|count=" + count + "|cost=" + Money.format(cost));
             syncInventory(player);
             syncBalance(player);
         } else {
@@ -126,7 +126,7 @@ public class ShopNetServer {
         if (si == null) {
             int removed = removeFromSlot(player, slotIndex, count);
             if (removed > 0) {
-                sendResult(player, "shop.force.dispose|item=" + target.getDisplayName() + "|count=" + removed);
+                sendResult(player, "shop.force.dispose|itemID=" + target.itemID + "|meta=" + target.getItemDamage() + "|count=" + removed);
                 syncInventory(player);
             } else sendResult(player, "shop.failed");
             return;
@@ -136,7 +136,7 @@ public class ShopNetServer {
             int gain = si.sellPriceTenths * removed;
             if (gain > 0) MoneyManager.addTenths(player, gain);
             syncBalance(player);
-            sendResult(player, "shop.sell.success|item=" + target.getDisplayName() + "|count=" + removed + "|gain=" + Money.format(gain));
+            sendResult(player, "shop.sell.success|itemID=" + target.itemID + "|meta=" + target.getItemDamage() + "|count=" + removed + "|gain=" + Money.format(gain));
             syncInventory(player);
         } else sendResult(player, "shop.failed");
     }
@@ -243,18 +243,20 @@ public class ShopNetServer {
                 EntityPlayerMP online = (EntityPlayerMP) o;
                 if (PlayerIdentityUtil.getOfflineUUID(online.username).equals(gl.ownerUUID)) {
                     sendResult(online, "gshop.sale.success|buyer=" + buyer.username
-                            + "|item=" + deliver.getDisplayName()
-                            + "|count=" + bought
-                            + "|revenue=" + Money.format(revenue));
+                            + "|revenue=" + Money.format(revenue)
+                            + "|itemID=" + deliver.itemID
+                            + "|meta=" + deliver.getItemDamage()
+                            + "|count=" + bought);
                     syncInventory(online);
                     sendGlobalSnapshot(online, false);
                     syncBalance(online);
                 }
             }
-            sendResult(buyer, "gshop.buy.success|item=" + deliver.getDisplayName()
-                    + "|count=" + bought
-                    + "|cost=" + Money.format(finalCost)
-                    + "|seller=" + gl.ownerName);
+            sendResult(buyer, "gshop.buy.success|cost=" + Money.format(finalCost)
+                    + "|seller=" + gl.ownerName
+                    + "|itemID=" + deliver.itemID
+                    + "|meta=" + deliver.getItemDamage()
+                    + "|count=" + bought);
         }
 
         broadcastGlobalSnapshot();
@@ -453,7 +455,8 @@ public class ShopNetServer {
         if (onlineBuyer != null) {
             ShopNetServer.syncBalance(onlineBuyer);
         }
-        sendResult(seller, "gshop.buyorder.sell.success|item=" + deliver.getDisplayName()
+        sendResult(seller, "gshop.buyorder.sell.success|itemID=" + deliver.itemID
+                + "|meta=" + deliver.getItemDamage()
                 + "|count=" + give
                 + "|buyer=" + order.ownerName);
 
@@ -533,10 +536,32 @@ public class ShopNetServer {
             Map.entry("default", List.of())
     );
 
+    private static final Set<String> CLIENT_LOCALIZE_KEYS = Set.of(
+            "shop.buy.success",
+            "shop.sell.success",
+            "shop.force.dispose",
+            "gshop.buy.success",
+            "gshop.sale.success",
+            "gshop.listing.add.success",
+            "gshop.listing.remove.success",
+            "gshop.listing.announce.line1.sell",
+            "gshop.listing.announce.line1.buy",
+            "gshop.buyorder.add.success",
+            "gshop.buyorder.remove.success",
+            "gshop.buyorder.sell.success",
+            "gshop.buyorder.sell.fail_zero",
+            "gshop.unlist.item.invalid"
+    );
+
     public static void sendResult(EntityPlayerMP player, String keyWithParams) {
         try {
-            MoneyManager.getBalanceTenths(player);
-            String key = keyWithParams;
+            String key = keyWithParams.contains("|") ? keyWithParams.substring(0, keyWithParams.indexOf('|')) : keyWithParams;
+
+            if (CLIENT_LOCALIZE_KEYS.contains(key)) {
+                player.sendChatToPlayer(ChatMessageComponent.createFromText(keyWithParams));
+                return;
+            }
+
             EnumChatFormatting color = EnumChatFormatting.YELLOW;
             Map<String, String> paramMap = new LinkedHashMap<>();
             if (keyWithParams.contains("|")) {

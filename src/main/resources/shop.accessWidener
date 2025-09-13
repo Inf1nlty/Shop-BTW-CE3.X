@@ -3,3 +3,6 @@ accessible field net/minecraft/src/EntityPlayer username Ljava/lang/String;
 accessible field net/minecraft/src/EntityPlayerMP currentWindowId I
 accessible field net/minecraft/src/GuiContainer theSlot Lnet/minecraft/src/Slot;
 accessible field net/minecraft/src/InventoryBasic inventoryContents [Lnet/minecraft/src/ItemStack;
+accessible method net/minecraft/src/ChatMessageComponent getTranslationKey ()Ljava/lang/String;
+accessible method net/minecraft/src/ChatMessageComponent getSubComponents ()Ljava/util/List;
+accessible method net/minecraft/src/ChatMessageComponent getText ()Ljava/lang/String;

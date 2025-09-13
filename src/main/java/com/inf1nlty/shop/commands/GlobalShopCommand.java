@@ -111,11 +111,10 @@ public class GlobalShopCommand extends CommandBase {
         hand.stackSize -= desired;
         if (hand.stackSize <= 0) player.inventory.mainInventory[player.inventory.currentItem] = null;
 
-        String display = buildDisplayName(listing);
-        ShopNetServer.sendResult(player, "gshop.listing.add.success|item=" + display + "|count=" + listing.amount + "|price=" + Money.format(listing.priceTenths));
+        ShopNetServer.sendResult(player, "gshop.listing.add.success|itemID=" + listing.itemId + "|meta=" + listing.meta + "|count=" + listing.amount + "|price=" + Money.format(listing.priceTenths));
         if (ShopConfig.ANNOUNCE_GLOBAL_LISTING) {
             broadcastResultAll(
-                    "gshop.listing.announce.line1.sell|player=" + player.username + "|item=" + display + "|count=" + listing.amount,
+                    "gshop.listing.announce.line1.sell|player=" + player.username + "|itemID=" + listing.itemId + "|meta=" + listing.meta + "|count=" + listing.amount,
                     "gshop.listing.announce.line2|price=" + Money.format(listing.priceTenths) + "|type=Sell"
             );
         }
@@ -159,11 +158,10 @@ public class GlobalShopCommand extends CommandBase {
 
         GlobalListing listing = GlobalShopData.addBuyOrder(player, itemId, meta, amount, priceTenths);
 
-        String display = buildDisplayName(listing);
-        ShopNetServer.sendResult(player, "gshop.buyorder.add.success|item=" + display + "|count=" + listing.amount + "|price=" + Money.format(listing.priceTenths));
+        ShopNetServer.sendResult(player, "gshop.buyorder.add.success|itemID=" + listing.itemId + "|meta=" + listing.meta + "|count=" + listing.amount + "|price=" + Money.format(listing.priceTenths));
         if (ShopConfig.ANNOUNCE_GLOBAL_LISTING) {
             broadcastResultAll(
-                    "gshop.listing.announce.line1.buy|player=" + player.username + "|item=" + display + "|count=" + listing.amount,
+                    "gshop.listing.announce.line1.buy|player=" + player.username + "|itemID=" + listing.itemId + "|meta=" + listing.meta + "|count=" + listing.amount,
                     "gshop.listing.announce.line2|price=" + Money.format(listing.priceTenths) + "|type=Buy"
             );
         }
@@ -184,7 +182,8 @@ public class GlobalShopCommand extends CommandBase {
         ShopNetServer.sendResult(player, "gshop.list.mine.header");
         for (GlobalListing g : mine) {
             ShopNetServer.sendResult(player, "gshop.list.mine.line|id=" + g.listingId
-                    + "|item=" + buildDisplayName(g)
+                    + "|itemID=" + g.itemId
+                    + "|meta=" + g.meta
                     + "|amount=" + (g.amount == -1 ? "∞" : g.amount)
                     + "|price=" + Money.format(g.priceTenths)
                     + (g.isBuyOrder ? "|type=Buy" : "|type=Sell"));
@@ -201,12 +200,14 @@ public class GlobalShopCommand extends CommandBase {
         if (removed != null) {
             if (removed.isBuyOrder) {
                 ShopNetServer.sendResult(player, "gshop.buyorder.remove.success|id=" + removed.listingId
-                        + "|item=" + buildDisplayName(removed)
+                        + "|itemID=" + removed.itemId
+                        + "|meta=" + removed.meta
                         + "|count=" + (removed.amount == -1 ? "unlimited" : removed.amount));
             } else {
                 refund(player, removed);
                 ShopNetServer.sendResult(player, "gshop.listing.remove.success|id=" + removed.listingId
-                        + "|item=" + buildDisplayName(removed)
+                        + "|itemID=" + removed.itemId
+                        + "|meta=" + removed.meta
                         + "|count=" + removed.amount);
             }
         } else {
@@ -228,14 +229,6 @@ public class GlobalShopCommand extends CommandBase {
             if (!player.inventory.addItemStackToInventory(stack)) player.dropPlayerItem(stack);
             remaining -= take;
         }
-    }
-
-    private String buildDisplayName(GlobalListing g) {
-        Item item = (g.itemId >= 0 && g.itemId < Item.itemsList.length) ? Item.itemsList[g.itemId] : null;
-        if (item == null) return "unknown";
-        ItemStack single = new ItemStack(item, 1, g.meta);
-        if (g.nbt != null) single.stackTagCompound = (net.minecraft.src.NBTTagCompound) g.nbt.copy();
-        return single.getDisplayName();
     }
 
     private int parseTenths(String raw) {

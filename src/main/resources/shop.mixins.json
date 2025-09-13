@@ -9,6 +9,7 @@
   ],
   "client": [
     "client.GameSettingsMixin",
+    "client.GUINewChatMixin",
     "client.MinecraftMixin",
     "client.SidebarPanelMixin"
   ],
