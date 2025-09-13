@@ -7,6 +7,8 @@ import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.HashMap;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * In-memory balances in tenths.
@@ -19,8 +21,33 @@ public class MoneyManager {
     // Global UUID balance table, supports offline player balance get/set
     private static final Map<UUID, Integer> BALANCES_BY_UUID = new HashMap<>();
 
-    private static final String SHOP_DIR = "shop";
-    private static final String BALANCES_FILE = SHOP_DIR + "/shop_balances.dat";
+    private static final Logger LOGGER = Logger.getLogger(MoneyManager.class.getName());
+
+    private static File resolveWorldDir() {
+        try {
+            Object server = Class.forName("net.minecraft.server.MinecraftServer")
+                    .getMethod("getServer")
+                    .invoke(null);
+            Object[] worlds = (Object[]) server.getClass().getField("worldServers").get(server);
+            Object world = worlds[0];
+            Object saveHandler = world.getClass().getMethod("getSaveHandler").invoke(world);
+            File worldDir = (File) saveHandler.getClass().getDeclaredMethod("getWorldDirectory").invoke(saveHandler);
+            File shopDir = new File(worldDir, "shop");
+            if (!shopDir.exists()) {
+                boolean created = shopDir.mkdirs();
+                if (!created) {
+                    LOGGER.warning("Failed to create shop directory: " + shopDir.getAbsolutePath());
+                }
+            }
+            return shopDir;
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Failed to resolve world dir, using default shop/", e);
+            return new File("shop");
+        }
+    }
+
+    private static final File SHOP_DIR = resolveWorldDir();
+    private static final File BALANCES_FILE = new File(SHOP_DIR, "shop_balances.dat");
 
     private MoneyManager() {}
 
@@ -67,26 +94,29 @@ public class MoneyManager {
 
     public static void saveBalancesToFile() {
         try {
-            File dir = new File(SHOP_DIR);
-            if (!dir.exists()) dir.mkdirs();
+            if (!SHOP_DIR.exists()) {
+                boolean created = SHOP_DIR.mkdirs();
+                if (!created) {
+                    LOGGER.warning("Failed to create shop directory: " + SHOP_DIR.getAbsolutePath());
+                }
+            }
             try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(BALANCES_FILE))) {
                 out.writeObject(BALANCES_BY_UUID);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Failed to save balances", e);
         }
     }
 
     @SuppressWarnings("unchecked")
     public static void loadBalancesFromFile() {
-        File file = new File(BALANCES_FILE);
-        if (!file.exists()) return;
-        try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(file))) {
+        if (!BALANCES_FILE.exists()) return;
+        try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(BALANCES_FILE))) {
             Map<UUID, Integer> loaded = (Map<UUID, Integer>) in.readObject();
             BALANCES_BY_UUID.clear();
             BALANCES_BY_UUID.putAll(loaded);
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Failed to load balances", e);
         }
     }
 }

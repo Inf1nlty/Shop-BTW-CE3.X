@@ -6,6 +6,7 @@ import net.minecraft.src.ItemStack;
 
 import java.io.*;
 import java.util.*;
+import java.util.logging.Logger;
 
 /**
  * Loads system shop items from config/shop.cfg
@@ -26,6 +27,8 @@ public class ShopConfig {
     private static List<ShopItem> itemList = new ArrayList<>();
     private static long lastLoadTime = 0L;
     private static final long RELOAD_MS = 3000;
+
+    private static final Logger LOGGER = Logger.getLogger(ShopConfig.class.getName());
 
     private ShopConfig() {}
 
@@ -218,8 +221,21 @@ public class ShopConfig {
     private static void generateDefault(File file) {
         try {
             File dir = file.getParentFile();
-            if (dir != null && !dir.exists()) dir.mkdirs();
-            if (!file.exists()) file.createNewFile();
+            if (dir != null && !dir.exists()) {
+                boolean createdDir = dir.mkdirs();
+
+                if (!createdDir) {
+                    LOGGER.warning("Failed to create directory: " + dir.getAbsolutePath());
+                }
+            }
+
+            if (!file.exists()) {
+                boolean createdFile = file.createNewFile();
+                if (!createdFile) {
+                    LOGGER.warning("Failed to create file: " + file.getAbsolutePath());
+                }
+            }
+
             try (BufferedWriter w = new BufferedWriter(new FileWriter(file))) {
                 w.write("# 系统商店配置文件，支持 id[:meta] 或 minecraft:name[:meta] 格式；价格为一位小数 (buyPrice,sellPrice)\n");
                 w.write("# System Shop Config: Supports id[:meta] or minecraft:name[:meta] format; price is one decimal (buyPrice,sellPrice)\n");
