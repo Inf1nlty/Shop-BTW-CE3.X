@@ -141,4 +141,10 @@ public class MailboxManager {
         return inv;
     }
 
+    public static void clearStatic() {
+        MAILBOXES.clear();
+        SHOP_DIR = null;
+        MAILBOX_DIR = null;
+        initialized = false;
+    }
 }

@@ -217,4 +217,14 @@ public final class GlobalShopData {
         save();
         return actual;
     }
+
+    public static void clearStatic() {
+        LIST.clear();
+        INDEX.clear();
+        BY_OWNER.clear();
+        SHOP_DIR = null;
+        FILE = null;
+        initialized = false;
+    }
+
 }

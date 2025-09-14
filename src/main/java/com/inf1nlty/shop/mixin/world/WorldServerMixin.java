@@ -23,6 +23,10 @@ public class WorldServerMixin {
     @Inject(method = "<init>", at = @At("RETURN"))
     private void onWorldServerConstructed(MinecraftServer server, ISaveHandler saveHandler, String worldName, int dimension, WorldSettings settings, Profiler profiler, ILogAgent logAgent, CallbackInfo ci) {
 
+        GlobalShopData.clearStatic();
+        MoneyManager.clearStatic();
+        MailboxManager.clearStatic();
+
         File worldDir = ((SaveHandler)saveHandler).getWorldDirectory();
         File shopDir = new File(worldDir, "shop");
 

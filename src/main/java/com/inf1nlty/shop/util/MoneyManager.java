@@ -125,4 +125,13 @@ public class MoneyManager {
             LOGGER.log(Level.SEVERE, "Failed to load balances", e);
         }
     }
+
+    public static void clearStatic() {
+        BALANCES.clear();
+        BALANCES_BY_UUID.clear();
+        SHOP_DIR = null;
+        BALANCES_FILE = null;
+        initialized = false;
+    }
+
 }

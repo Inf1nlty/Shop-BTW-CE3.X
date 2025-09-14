@@ -17,7 +17,6 @@ public class ShopAddon extends BTWAddon {
     public void initialize() {
         AddonHandler.logMessage(getName() + " v" + getVersionString() + " Initializing...");
 
-        GlobalShopData.load();
         this.registerAddonCommand(new ShopCommand());
         this.registerAddonCommand(new MoneyCommand());
         this.registerAddonCommand(new GlobalShopCommand());
