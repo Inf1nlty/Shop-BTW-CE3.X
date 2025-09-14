@@ -13,13 +13,10 @@ import com.inf1nlty.shop.util.MoneyManager;
 
 public class ShopAddon extends BTWAddon {
 
-    public static String MOD_VERSION;
-
     @Override
     public void initialize() {
         AddonHandler.logMessage(getName() + " v" + getVersionString() + " Initializing...");
-        MOD_VERSION = this.getVersionString();
-        MoneyManager.loadBalancesFromFile();
+
         GlobalShopData.load();
         this.registerAddonCommand(new ShopCommand());
         this.registerAddonCommand(new MoneyCommand());

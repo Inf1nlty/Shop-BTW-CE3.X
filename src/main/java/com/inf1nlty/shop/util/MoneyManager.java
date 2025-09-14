@@ -23,36 +23,35 @@ public class MoneyManager {
 
     private static final Logger LOGGER = Logger.getLogger(MoneyManager.class.getName());
 
-    private static File resolveWorldDir() {
-        try {
-            Object server = Class.forName("net.minecraft.server.MinecraftServer")
-                    .getMethod("getServer")
-                    .invoke(null);
-            Object[] worlds = (Object[]) server.getClass().getField("worldServers").get(server);
-            Object world = worlds[0];
-            Object saveHandler = world.getClass().getMethod("getSaveHandler").invoke(world);
-            File worldDir = (File) saveHandler.getClass().getDeclaredMethod("getWorldDirectory").invoke(saveHandler);
-            File shopDir = new File(worldDir, "shop");
-            if (!shopDir.exists()) {
-                boolean created = shopDir.mkdirs();
-                if (!created) {
-                    LOGGER.warning("Failed to create shop directory: " + shopDir.getAbsolutePath());
-                }
+    private static File SHOP_DIR = null;
+    private static File BALANCES_FILE = null;
+    private static boolean initialized = false;
+
+
+    public static void init(File shopDir) {
+        if (initialized) return;
+        SHOP_DIR = shopDir;
+        BALANCES_FILE = new File(SHOP_DIR, "shop_balances.dat");
+        if (!SHOP_DIR.exists()) {
+            boolean created = SHOP_DIR.mkdirs();
+            if (!created) {
+                LOGGER.warning("Failed to create shop directory: " + SHOP_DIR.getAbsolutePath());
             }
-            return shopDir;
-        } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "Failed to resolve world dir, using default shop/", e);
-            return new File("shop");
         }
+        initialized = true;
     }
 
-    private static final File SHOP_DIR = resolveWorldDir();
-    private static final File BALANCES_FILE = new File(SHOP_DIR, "shop_balances.dat");
+    private static void ensureInitialized() {
+        if (!initialized || SHOP_DIR == null || BALANCES_FILE == null) {
+            throw new IllegalStateException("MoneyManager is not initialized! Call MoneyManager.init(shopDir) after world load.");
+        }
+    }
 
     private MoneyManager() {}
 
     // Get balance by EntityPlayer (online), fallback to UUID storage
     public static int getBalanceTenths(EntityPlayer player) {
+        ensureInitialized();
         Integer bal = BALANCES.get(player);
         if (bal != null) return bal;
         return getBalanceTenths(PlayerIdentityUtil.getOfflineUUID(player.username));
@@ -60,22 +59,26 @@ public class MoneyManager {
 
     // Get balance by UUID (offline/online)
     public static int getBalanceTenths(UUID uuid) {
+        ensureInitialized();
         return BALANCES_BY_UUID.getOrDefault(uuid, 0);
     }
 
     // Set balance for EntityPlayer (online memory only!)
     public static void setBalanceTenths(EntityPlayer player, int v) {
+        ensureInitialized();
         BALANCES.put(player, v);
     }
 
     // Set balance for UUID (offline/online) and persist
     public static void setBalanceTenths(UUID uuid, int v) {
+        ensureInitialized();
         BALANCES_BY_UUID.put(uuid, v);
         saveBalancesToFile();
     }
 
     // Add delta to EntityPlayer and update UUID storage (for online player)
     public static void addTenths(EntityPlayer player, int delta) {
+        ensureInitialized();
         int newBal = getBalanceTenths(player) + delta;
         BALANCES.put(player, newBal);
         setBalanceTenths(PlayerIdentityUtil.getOfflineUUID(player.username), newBal);
@@ -83,6 +86,7 @@ public class MoneyManager {
 
     // Add delta to UUID, support offline player, and persist
     public static void addTenths(UUID uuid, int delta) {
+        ensureInitialized();
         int newBalance = getBalanceTenths(uuid) + delta;
         setBalanceTenths(uuid, newBalance); // This will save to file
         for (EntityPlayer player : BALANCES.keySet()) {
@@ -93,6 +97,7 @@ public class MoneyManager {
     }
 
     public static void saveBalancesToFile() {
+        ensureInitialized();
         try {
             if (!SHOP_DIR.exists()) {
                 boolean created = SHOP_DIR.mkdirs();
@@ -110,6 +115,7 @@ public class MoneyManager {
 
     @SuppressWarnings("unchecked")
     public static void loadBalancesFromFile() {
+        ensureInitialized();
         if (!BALANCES_FILE.exists()) return;
         try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(BALANCES_FILE))) {
             Map<UUID, Integer> loaded = (Map<UUID, Integer>) in.readObject();

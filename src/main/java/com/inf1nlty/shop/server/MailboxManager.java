@@ -12,12 +12,34 @@ import java.util.*;
 public class MailboxManager {
 
     private static final Map<UUID, InventoryBasic> MAILBOXES = new HashMap<>();
-    private static final String SHOP_DIR = "shop";
-    private static final String MAILBOX_DIR = SHOP_DIR + "/mailboxes";
+    private static File SHOP_DIR = null;
+    private static File MAILBOX_DIR = null;
+    private static boolean initialized = false;
+
 
     private MailboxManager() {}
 
+    public static void init(File shopDir) {
+        if (initialized) return;
+        SHOP_DIR = shopDir;
+        MAILBOX_DIR = new File(SHOP_DIR, "mailboxes");
+        if (!MAILBOX_DIR.exists()) {
+            boolean created = MAILBOX_DIR.mkdirs();
+            if (!created) {
+                System.err.println("Failed to create mailbox directory: " + MAILBOX_DIR.getAbsolutePath());
+            }
+        }
+        initialized = true;
+    }
+
+    private static void ensureInitialized() {
+        if (!initialized || SHOP_DIR == null || MAILBOX_DIR == null) {
+            throw new IllegalStateException("MailboxManager is not initialized! Call MailboxManager.init(shopDir) after world load.");
+        }
+    }
+
     public static InventoryBasic getMailbox(UUID playerId) {
+        ensureInitialized();
         InventoryBasic inv = MAILBOXES.get(playerId);
         if (inv == null) {
             inv = loadMailbox(playerId);
@@ -27,15 +49,10 @@ public class MailboxManager {
     }
 
     public static void deliver(UUID playerId, ItemStack stack) {
+        ensureInitialized();
         InventoryBasic inv = getMailbox(playerId);
         addToInventory(inv, stack);
         saveMailbox(playerId, inv);
-    }
-
-    public static void removeMailbox(UUID playerId) {
-        MAILBOXES.remove(playerId);
-        File mailboxFile = new File(MAILBOX_DIR, playerId.toString() + ".dat");
-        if (mailboxFile.exists()) mailboxFile.delete();
     }
 
     /**
@@ -82,10 +99,10 @@ public class MailboxManager {
     }
 
     public static void saveMailbox(UUID playerId, InventoryBasic inv) {
+        ensureInitialized();
         try {
-            File dir = new File(MAILBOX_DIR);
-            if (!dir.exists()) dir.mkdirs();
-            File mailboxFile = new File(dir, playerId.toString() + ".dat");
+            if (!MAILBOX_DIR.exists()) MAILBOX_DIR.mkdirs();
+            File mailboxFile = new File(MAILBOX_DIR, playerId.toString() + ".dat");
             NBTTagList nbtList = new NBTTagList();
             for (int i = 0; i < inv.getSizeInventory(); i++) {
                 ItemStack stack = inv.getStackInSlot(i);
@@ -103,6 +120,7 @@ public class MailboxManager {
     }
 
     private static InventoryBasic loadMailbox(UUID playerId) {
+        ensureInitialized();
         File mailboxFile = new File(MAILBOX_DIR, playerId.toString() + ".dat");
         InventoryBasic inv = new InventoryBasic("Mailbox", false, 133);
         if (!mailboxFile.exists()) return inv;
@@ -122,4 +140,5 @@ public class MailboxManager {
         } catch (Exception ignored) {}
         return inv;
     }
+
 }

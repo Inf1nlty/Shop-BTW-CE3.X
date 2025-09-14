@@ -21,8 +21,11 @@ public abstract class EntityPlayerMixin {
     @Inject(method = "writeEntityToNBT", at = @At("TAIL"))
     private void shop$write(NBTTagCompound tag, CallbackInfo ci) {
         EntityPlayer player = (EntityPlayer)(Object)this;
+        int bal = MoneyManager.getBalanceTenths(player);
+        MoneyManager.setBalanceTenths(PlayerIdentityUtil.getOfflineUUID(player.username), bal);
+        tag.setInteger("shop_money", bal);
+
         // Always write UUID-based balance for full offline/online sync
-        tag.setInteger("shop_money", MoneyManager.getBalanceTenths(PlayerIdentityUtil.getOfflineUUID(player.username)));
         NBTTagList mailboxList = new NBTTagList();
         InventoryBasic inv = MailboxManager.getMailbox(PlayerIdentityUtil.getOfflineUUID(player.username));
         for (int i = 0; i < inv.getSizeInventory(); i++) {

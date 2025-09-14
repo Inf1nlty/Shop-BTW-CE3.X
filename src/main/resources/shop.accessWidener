@@ -6,3 +6,4 @@ accessible field net/minecraft/src/InventoryBasic inventoryContents [Lnet/minecr
 accessible method net/minecraft/src/ChatMessageComponent getTranslationKey ()Ljava/lang/String;
 accessible method net/minecraft/src/ChatMessageComponent getSubComponents ()Ljava/util/List;
 accessible method net/minecraft/src/ChatMessageComponent getText ()Ljava/lang/String;
+accessible method net/minecraft/src/SaveHandler getWorldDirectory ()Ljava/io/File;

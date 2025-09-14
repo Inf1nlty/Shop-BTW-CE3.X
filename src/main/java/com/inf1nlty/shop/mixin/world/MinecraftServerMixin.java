@@ -16,7 +16,7 @@ public abstract class MinecraftServerMixin {
 
     @Inject(method = "stopServer", at = @At("RETURN"))
     private void shop$onServerShutdown(CallbackInfo ci) {
-        List rawList = ((MinecraftServer)(Object)this).getConfigurationManager().playerEntityList;
+        List<?> rawList = ((MinecraftServer)(Object)this).getConfigurationManager().playerEntityList;
         List<EntityPlayerMP> playerList = new ArrayList<>();
         for (Object o : rawList) {
             if (o instanceof EntityPlayerMP p) {
