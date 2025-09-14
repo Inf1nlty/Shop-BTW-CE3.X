@@ -313,16 +313,19 @@ public class ShopNetServer {
                 sendResult(player, "gshop.buyorder.refund|amount=" + gl.amount + "|refund=" + Money.format(refund));
             }
             GlobalShopData.remove(listingId, PlayerIdentityUtil.getOfflineUUID(player.username));
-            sendResult(player, "gshop.buyorder.remove.success|id=" + gl.listingId
-                    + "|item=" + buildDisplayName(gl)
-                    + "|count=" + gl.amount);
+
+            sendResult(player, "gshop.buyorder.remove.success|itemID=" + gl.itemId
+                    + "|meta=" + gl.meta
+                    + "|count=" + gl.amount
+                    + "|id=" + gl.listingId);
             broadcastGlobalSnapshot();
             return;
         }
         Item item = (gl.itemId >= 0 && gl.itemId < Item.itemsList.length) ? Item.itemsList[gl.itemId] : null;
         if (item == null) {
             sendResult(player, "gshop.unlist.item.invalid|id=" + gl.listingId
-                    + "|item=" + buildDisplayName(gl)
+                    + "|itemID=" + gl.itemId
+                    + "|meta=" + gl.meta
                     + "|count=" + gl.amount);
             broadcastGlobalSnapshot();
             return;
@@ -338,13 +341,14 @@ public class ShopNetServer {
                 player.dropPlayerItem(stack);
                 remaining -= take;
             }
-            sendResult(player, "gshop.listing.remove.success|id=" + removed.listingId
-                    + "|item=" + buildDisplayName(removed)
-                    + "|count=" + removed.amount);
+
+            sendResult(player, "gshop.listing.remove.success|itemID=" + removed.itemId
+                    + "|meta=" + removed.meta
+                    + "|count=" + removed.amount
+                    + "|id=" + removed.listingId);
             broadcastGlobalSnapshot();
         }
     }
-
     // ===== Buy Order fulfillment =====
 
     /**

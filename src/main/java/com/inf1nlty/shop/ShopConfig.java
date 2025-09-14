@@ -53,6 +53,19 @@ public class ShopConfig {
         loadInternal(new File("config/shop.cfg"));
     }
 
+    public static synchronized void regenerateDefault() {
+        File file = new File("config/shop.cfg");
+        if (file.exists()) {
+            boolean deleted = file.delete();
+            if (!deleted) {
+                LOGGER.warning("Failed to delete existing shop.cfg before regenerating.");
+            }
+        }
+        generateDefault(file);
+        loadInternal(file);
+        lastLoadTime = 0L;
+    }
+
     private static void loadInternal(File file) {
         List<ShopItem> list = new ArrayList<>();
         boolean forceFlag = true;

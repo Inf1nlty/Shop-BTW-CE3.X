@@ -21,7 +21,7 @@ public class ShopCommand extends CommandBase {
 
     @Override
     public String getCommandUsage(ICommandSender sender) {
-        return "/shop [reload]";
+        return "/shop [reload|regen]";
     }
 
     @Override
@@ -47,6 +47,20 @@ public class ShopCommand extends CommandBase {
             }
             return;
         }
+
+        if (args.length == 1 && "regen".equalsIgnoreCase(args[0])) {
+            ShopConfig.regenerateDefault();
+            ShopConfig.forceReload();
+            ShopNetServer.ensureConfig(true);
+            ChatMessageComponent msg = ChatMessageComponent.createFromTranslationKey("shop.config.regen").setColor(EnumChatFormatting.AQUA);
+            if (sender instanceof EntityPlayerMP mp) {
+                mp.sendChatToPlayer(msg);
+            } else {
+                sender.sendChatToPlayer(msg);
+            }
+            return;
+        }
+
         if (sender instanceof EntityPlayerMP mp) {
             ShopNetServer.ensureConfig(false);
             ShopNetServer.openSystemShop(mp);

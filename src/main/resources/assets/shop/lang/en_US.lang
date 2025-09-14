@@ -10,6 +10,7 @@ shop.buy.success=§aBought %s x %s for %s
 shop.sell.success=§6Sold %s x %s and gained %s
 shop.force.dispose=§eDisposed %s x%s
 shop.config.reload=§bShop config reloaded
+shop.config.regen=§bShop config has been regenerated to default
 shop.money.show=§eCurrent balance: §f%s
 shop.money.set.success=§aBalance set to §f%s
 shop.money.set.no_permission=§cYou do not have permission to set balance
