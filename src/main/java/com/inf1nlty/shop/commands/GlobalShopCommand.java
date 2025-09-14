@@ -90,6 +90,12 @@ public class GlobalShopCommand extends CommandBase {
     }
 
     private void handleSell(EntityPlayerMP player, String[] args) {
+
+        if (player.dimension != 0) {
+            ShopNetServer.sendResult(player, "gshop.sell.fail_only_overworld");
+            return;
+        }
+
         if (args.length < 2) { ShopNetServer.sendResult(player, "gshop.sell.usage"); return; }
         ItemStack hand = player.inventory.getCurrentItem();
         if (hand == null) { ShopNetServer.sendResult(player, "gshop.listing.add.fail_no_item"); return; }

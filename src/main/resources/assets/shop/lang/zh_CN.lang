@@ -32,6 +32,7 @@ gshop.buyer=收购者
 gshop.buy.success=§a以 %s 金币从 %s 购买了 %s x %s
 gshop.sale.success=§e%s 以 %s 金币购买了你的 %s x %s
 gshop.buy.self_not_allowed=§e不能购买你自己的上架
+gshop.sell.fail_only_overworld=§c只能在主世界上架出售订单！
 gshop.sell.self_not_allowed=§e不能卖给你自己的收购订单
 gshop.buy.not_enough_money=§c余额不足
 gshop.buy.not_found=§c该上架不存在

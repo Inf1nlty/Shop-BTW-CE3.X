@@ -33,6 +33,7 @@ gshop.buy.success=§aBought %s x %s for %s from %s
 gshop.sale.success=§e%s bought your %s x %s for %s
 gshop.buy.self_not_allowed=§eYou cannot purchase your own listing
 gshop.sell.self_not_allowed=§eYou cannot sell to your own order
+gshop.sell.fail_only_overworld=§cYou can only list sell orders in the Overworld!
 gshop.buy.not_enough_money=§cNot enough money
 gshop.buy.not_found=§cListing not found
 gshop.listing.add.success=§aListed %s x %s at %s
