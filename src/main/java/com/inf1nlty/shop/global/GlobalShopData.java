@@ -25,11 +25,32 @@ public final class GlobalShopData {
     private static final Map<Integer, GlobalListing> INDEX = new HashMap<>();
     private static final Map<UUID, List<GlobalListing>> BY_OWNER = new HashMap<>();
 
-    private static final File FILE = new File("config/global_shop.cfg");
+    private static File SHOP_DIR = null;
+    private static File FILE = null;
+    private static boolean initialized = false;
+
+    public static void init(File shopDir) {
+        if (initialized) return;
+        SHOP_DIR = shopDir;
+        FILE = new File(SHOP_DIR, "global_shop.cfg");
+        if (!SHOP_DIR.exists()) {
+            if (!SHOP_DIR.mkdirs()) {
+                throw new RuntimeException("Failed to create shop directory: " + SHOP_DIR.getAbsolutePath());
+            }
+        }
+        initialized = true;
+    }
+
+    private static void ensureInitialized() {
+        if (!initialized || SHOP_DIR == null || FILE == null) {
+            throw new IllegalStateException("GlobalShopData is not initialized! Call GlobalShopData.init(shopDir) after world load.");
+        }
+    }
 
     private GlobalShopData() {}
 
     public static synchronized void load() {
+        ensureInitialized();
         LIST.clear();
         INDEX.clear();
         BY_OWNER.clear();
@@ -78,9 +99,14 @@ public final class GlobalShopData {
     }
 
     public static synchronized void save() {
+        ensureInitialized();
         try {
-            File dir = FILE.getParentFile();
-            if (dir != null && !dir.exists()) dir.mkdirs();
+            File dir = SHOP_DIR;
+            if (dir != null && !dir.exists()) {
+                if (!dir.mkdirs()) {
+                    throw new RuntimeException("Failed to create directory: " + dir.getAbsolutePath());
+                }
+            }
             try (BufferedWriter w = new BufferedWriter(new FileWriter(FILE))) {
                 w.write("# Global Shop Listings\n");
                 for (GlobalListing g : LIST) {
@@ -118,11 +144,11 @@ public final class GlobalShopData {
     }
 
     public static synchronized GlobalListing get(int id) {
-        GlobalListing g = INDEX.get(id);
-        return g == null ? null : g;
+        return INDEX.get(id);
     }
 
     public static synchronized GlobalListing addSellOrder(EntityPlayer player, int itemId, int meta, int amount, int priceTenths) {
+        ensureInitialized();
         GlobalListing g = new GlobalListing();
         g.listingId = ListingIdGenerator.nextId();
         g.ownerName = player.username;
@@ -144,6 +170,7 @@ public final class GlobalShopData {
     }
 
     public static synchronized GlobalListing addBuyOrder(EntityPlayer player, int itemId, int meta, int amount, int priceTenths) {
+        ensureInitialized();
         GlobalListing g = new GlobalListing();
         g.listingId = ListingIdGenerator.nextId();
         g.ownerName = player.username;
@@ -162,6 +189,7 @@ public final class GlobalShopData {
     }
 
     public static synchronized GlobalListing remove(int listingId, UUID actor) {
+        ensureInitialized();
         GlobalListing g = INDEX.get(listingId);
         if (g == null) return null;
         if (!g.ownerUUID.equals(actor)) return null;
@@ -174,6 +202,7 @@ public final class GlobalShopData {
     }
 
     public static synchronized int buy(int listingId, int count) {
+        ensureInitialized();
         GlobalListing g = INDEX.get(listingId);
         if (g == null) return -1;
         if (count <= 0) count = 1;

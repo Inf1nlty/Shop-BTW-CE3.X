@@ -1,5 +1,6 @@
 package com.inf1nlty.shop.mixin.world;
 
+import com.inf1nlty.shop.global.GlobalShopData;
 import com.inf1nlty.shop.server.MailboxManager;
 import com.inf1nlty.shop.util.MoneyManager;
 import net.minecraft.server.MinecraftServer;
@@ -23,10 +24,13 @@ public class WorldServerMixin {
     private void onWorldServerConstructed(MinecraftServer server, ISaveHandler saveHandler, String worldName, int dimension, WorldSettings settings, Profiler profiler, ILogAgent logAgent, CallbackInfo ci) {
 
         File worldDir = ((SaveHandler)saveHandler).getWorldDirectory();
-
         File shopDir = new File(worldDir, "shop");
+
         MoneyManager.init(shopDir);
         MoneyManager.loadBalancesFromFile();
+
+        GlobalShopData.init(shopDir);
+        GlobalShopData.load();
 
         MailboxManager.init(shopDir);
     }
