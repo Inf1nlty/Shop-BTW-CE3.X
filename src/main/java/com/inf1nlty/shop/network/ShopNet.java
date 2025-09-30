@@ -214,11 +214,12 @@ public final class ShopNet {
         writePacket(out -> out.writeByte(12));
     }
 
-    public static void sendSellToBuyOrder(int listingId, int count) {
+    public static void sendSellToBuyOrder(int listingId, int count, int slotIndex) {
         writePacket(out -> {
             out.writeByte(13);
             out.writeInt(listingId);
             out.writeInt(count);
+            out.writeInt(slotIndex);
         });
     }
 

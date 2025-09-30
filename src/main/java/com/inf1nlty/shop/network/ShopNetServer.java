@@ -41,7 +41,12 @@ public class ShopNetServer {
                 case 10 -> { int item = in.readInt(); int meta = in.readInt(); int amt = in.readInt(); int price = in.readInt(); listGlobal(player, item, meta, amt, price); }
                 case 11 -> { int lid = in.readInt(); unlistGlobal(player, lid); }
                 case 12 -> openMailbox(player);
-                case 13 -> { int listingId = in.readInt(); int count = in.readInt(); sellToBuyOrder(player, listingId, count); }
+                case 13 -> {
+                    int listingId = in.readInt();
+                    int count = in.readInt();
+                    int slotIndex = in.readInt(); // 新增
+                    sellToBuyOrder(player, listingId, count, slotIndex);
+                }
                 default -> {}
             }
         } catch (Exception ignored) {}
@@ -394,8 +399,9 @@ public class ShopNetServer {
      * Handles selling items to a buy order.
      * If seller's hand matches the buy order, delivers item to mailbox of buy order owner.
      */
-    private static void sellToBuyOrder(EntityPlayerMP seller, int listingId, int count) {
+    private static void sellToBuyOrder(EntityPlayerMP seller, int listingId, int count, int slotIndex) {
         GlobalListing order = GlobalShopData.get(listingId);
+
         if (order == null || !order.isBuyOrder) {
             sendResult(seller, "gshop.buyorder.not_found");
             return;
@@ -404,21 +410,25 @@ public class ShopNetServer {
             sendResult(seller, "gshop.buy.self_not_allowed");
             return;
         }
-        ItemStack hand = seller.inventory.getCurrentItem();
-        if (hand == null) {
+        if (slotIndex < 0 || slotIndex >= seller.inventory.mainInventory.length) {
             sendResult(seller, "gshop.listing.add.fail_no_item");
             return;
         }
-        if (hand.itemID != order.itemId || hand.getItemDamage() != order.meta) {
+        ItemStack stack = seller.inventory.mainInventory[slotIndex];
+        if (stack == null) {
+            sendResult(seller, "gshop.listing.add.fail_no_item");
+            return;
+        }
+        if (stack.itemID != order.itemId || stack.getItemDamage() != order.meta) {
             sendResult(seller, "gshop.buyorder.wrong_item");
             return;
         }
 
         int give;
         if (order.amount == -1) {
-            give = Math.min(hand.stackSize, count);
+            give = Math.min(stack.stackSize, count);
         } else {
-            give = Math.min(hand.stackSize, Math.min(count, order.amount));
+            give = Math.min(stack.stackSize, Math.min(count, order.amount));
             if (order.amount <= 0) {
                 GlobalShopData.remove(listingId, order.ownerUUID);
                 broadcastGlobalSnapshot();
@@ -434,11 +444,11 @@ public class ShopNetServer {
         int revenue = order.priceTenths * give;
         UUID buyerId = order.ownerUUID;
 
-        hand.stackSize -= give;
-        if (hand.stackSize <= 0) seller.inventory.mainInventory[seller.inventory.currentItem] = null;
+        stack.stackSize -= give;
+        if (stack.stackSize <= 0) seller.inventory.mainInventory[slotIndex] = null;
 
-        ItemStack deliver = new ItemStack(hand.getItem(), give, hand.getItemDamage());
-        if (hand.stackTagCompound != null) deliver.stackTagCompound = (NBTTagCompound) hand.stackTagCompound.copy();
+        ItemStack deliver = new ItemStack(stack.getItem(), give, stack.getItemDamage());
+        if (stack.stackTagCompound != null) deliver.stackTagCompound = (NBTTagCompound) stack.stackTagCompound.copy();
         MailboxManager.deliver(buyerId, deliver);
 
         EntityPlayerMP onlineBuyer = null;
@@ -472,6 +482,8 @@ public class ShopNetServer {
                 sendResult(seller, "gshop.buyorder.fulfilled");
                 syncInventory(seller);
                 return;
+            } else {
+                GlobalShopData.save();
             }
         }
 

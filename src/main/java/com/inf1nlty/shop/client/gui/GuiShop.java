@@ -321,8 +321,8 @@ public class GuiShop extends GuiContainer {
     }
 
     private boolean isEquipment(Item item) {
-        return item
-                instanceof ItemArmor
+        return
+                item instanceof ItemArmor
                 || item instanceof ItemSword
                 || item instanceof ToolItem
                 || item instanceof ItemTool

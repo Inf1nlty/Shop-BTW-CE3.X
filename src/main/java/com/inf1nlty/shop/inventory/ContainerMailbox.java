@@ -75,8 +75,10 @@ public class ContainerMailbox extends Container {
             } else {
                 slot.onSlotChanged();
             }
-            MailboxManager.saveMailbox(PlayerIdentityUtil.getOfflineUUID(player.username),
-                    (InventoryBasic) slot.inventory);
+            if (!player.worldObj.isRemote) {
+                MailboxManager.saveMailbox(PlayerIdentityUtil.getOfflineUUID(player.username),
+                        (InventoryBasic) slot.inventory);
+            }
             return original;
         }
         return null;

@@ -1,5 +1,6 @@
 package com.inf1nlty.shop.client.gui;
 
+import btw.item.items.ToolItem;
 import com.inf1nlty.shop.client.state.ShopClientData;
 import com.inf1nlty.shop.inventory.ContainerShopPlayer;
 import com.inf1nlty.shop.network.ShopNet;
@@ -326,26 +327,76 @@ public class GuiGlobalShop extends GuiContainer {
         int relX = mouseXAbs - gl;
         int relY = mouseYAbs - gt;
         int local = getHoverLocalIndex(relX, relY);
+        boolean alt = Keyboard.isKeyDown(Keyboard.KEY_LMENU) || Keyboard.isKeyDown(Keyboard.KEY_RMENU);
+        boolean shift = isShiftKeyDown();
+
         if (local >= 0 && button == 0) {
             int globalIndex = currentPage * cap + local;
+
             if (globalIndex < CLIENT_LISTINGS.size()) {
                 GlobalListingClient lc = CLIENT_LISTINGS.get(globalIndex);
+
                 if (lc.isBuyOrder) {
-                    // Selling to buy order
-                    ItemStack hand = mc.thePlayer.inventory.getCurrentItem();
-                    int count = isShiftKeyDown() ? (hand != null ? hand.stackSize : 1) : 1;
-                    ShopNet.sendSellToBuyOrder(lc.listingId, count);
-                } else {
-                    // Buying from sell listing
+                    if (alt) {
+                        for (int i = 0; i < mc.thePlayer.inventory.mainInventory.length; ++i) {
+                            ItemStack stack = mc.thePlayer.inventory.mainInventory[i];
+                            if (stack != null
+                                    && stack.itemID == lc.itemId
+                                    && stack.getItemDamage() == lc.meta
+                                    && !isEquipment(stack.getItem())) {
+                                ShopNet.sendSellToBuyOrder(lc.listingId, stack.stackSize, i);
+                            }
+                        }
+                        return;
+                    }
+
+                    int slotIndex = mc.thePlayer.inventory.currentItem;
+                    ItemStack hand = mc.thePlayer.inventory.mainInventory[slotIndex];
+
+                    if (shift) {
+                        if (hand != null
+                                && hand.itemID == lc.itemId
+                                && hand.getItemDamage() == lc.meta
+                                && !isEquipment(hand.getItem())) {
+                            int stackLimit = hand.getItem().getItemStackLimit();
+                            int sellCount = Math.min(hand.stackSize, stackLimit);
+                            ShopNet.sendSellToBuyOrder(lc.listingId, sellCount, slotIndex);
+                        } else {
+                            mc.thePlayer.addChatMessage(I18n.getString("gshop.listing.add.fail_no_item"));
+                        }
+                        return;
+                    }
+
+                    if (hand != null
+                            && hand.itemID == lc.itemId
+                            && hand.getItemDamage() == lc.meta) {
+                        ShopNet.sendSellToBuyOrder(lc.listingId, 1, slotIndex);
+                    } else {
+                        mc.thePlayer.addChatMessage(I18n.getString("gshop.listing.add.fail_no_item"));
+                    }
+                }
+                else {
                     Item item = Item.itemsList[lc.itemId];
                     int stackLimit = item != null ? item.getItemStackLimit() : 64;
-                    int count = isShiftKeyDown() ? Math.min(stackLimit, lc.amount) : 1;
+                    int count = shift ? Math.min(stackLimit, lc.amount) : 1;
                     ShopNet.sendGlobalBuy(lc.listingId, count);
                 }
                 return;
             }
         }
         super.mouseClicked(mouseXAbs, mouseYAbs, button);
+    }
+
+    private boolean isEquipment(Item item) {
+        return
+                item instanceof ItemArmor
+                || item instanceof ItemSword
+                || item instanceof ToolItem
+                || item instanceof ItemTool
+                || item instanceof ItemBow
+                || item instanceof ItemHoe
+                || item instanceof ItemFishingRod
+                || item instanceof ItemShears;
     }
 
     @Override
