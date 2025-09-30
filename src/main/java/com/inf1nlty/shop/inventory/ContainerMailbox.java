@@ -1,5 +1,7 @@
 package com.inf1nlty.shop.inventory;
 
+import com.inf1nlty.shop.server.MailboxManager;
+import com.inf1nlty.shop.util.PlayerIdentityUtil;
 import net.minecraft.src.*;
 
 public class ContainerMailbox extends Container {
@@ -73,6 +75,8 @@ public class ContainerMailbox extends Container {
             } else {
                 slot.onSlotChanged();
             }
+            MailboxManager.saveMailbox(PlayerIdentityUtil.getOfflineUUID(player.username),
+                    (InventoryBasic) slot.inventory);
             return original;
         }
         return null;

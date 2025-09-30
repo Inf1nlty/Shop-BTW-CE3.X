@@ -1,5 +1,6 @@
 package com.inf1nlty.shop.client.gui;
 
+import btw.item.items.ToolItem;
 import com.inf1nlty.shop.client.state.ShopClientData;
 import com.inf1nlty.shop.client.state.SystemShopClientCatalog;
 import com.inf1nlty.shop.inventory.ContainerShopPlayer;
@@ -8,6 +9,7 @@ import com.inf1nlty.shop.util.Money;
 import emi.dev.emi.emi.screen.EmiScreenManager;
 import net.minecraft.src.*;
 import org.lwjgl.input.Keyboard;
+import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
 
@@ -258,41 +260,82 @@ public class GuiShop extends GuiContainer {
                 return;
             }
         }
+
         boolean shift = isShiftKeyDown();
-        int cap = capacityPerPage();
-        int gl = (width - xSize)/2;
-        int gt = (height - ySize)/2;
-        int relX = mx - gl;
-        int relY = my - gt;
-        int local = getHoverLocalIndex(relX, relY);
-        if (local >= 0 && button == 0) {
-            int index = currentPage * cap + local;
-            if (index < entries.size()) {
-                SystemShopClientCatalog.Entry e = entries.get(index);
-                Item item = Item.itemsList[e.itemID];
-                int stackLimit = item != null ? item.getItemStackLimit() : 64;
-                int count = shift ? stackLimit : 1;
-                ShopNet.sendPurchaseRequest(e.itemID, e.meta, count);
+        boolean alt = Keyboard.isKeyDown(Keyboard.KEY_LMENU) || Keyboard.isKeyDown(Keyboard.KEY_RMENU);
+
+        Slot slot = getSlotUnderMouse(mx, my);
+
+        if (slot != null && slot.inventory == mc.thePlayer.inventory && button == 0 && alt) {
+            ItemStack s = slot.getStack();
+            if (s != null && !isEquipment(s.getItem())) {
+                int targetId = s.itemID;
+                int targetMeta = s.getItemDamage();
+
+                for (int i = 0; i < mc.thePlayer.inventory.mainInventory.length; ++i) {
+                    ItemStack stack = mc.thePlayer.inventory.mainInventory[i];
+                    if (stack != null
+                            && stack.itemID == targetId
+                            && stack.getItemDamage() == targetMeta
+                            && !isEquipment(stack.getItem())) {
+                        ShopNet.sendSellRequest(stack.itemID, stack.stackSize, i);
+                    }
+                }
                 return;
             }
         }
-        if (button == 0 && shift) {
-            Slot slot = getSlotUnderMouse(mx, my);
-            if (slot != null && slot.getHasStack()) {
-                ItemStack s = slot.getStack();
+
+        if (slot != null && slot.inventory == mc.thePlayer.inventory && button == 0 && shift) {
+            ItemStack s = slot.getStack();
+            if (s != null) {
                 int containerIndex = slot.slotNumber;
                 int mainIndex = (containerIndex < 27) ? (9 + containerIndex) : (containerIndex - 27);
                 ShopNet.sendSellRequest(s.itemID, s.stackSize, mainIndex);
                 return;
             }
         }
+
+        int cap = capacityPerPage();
+        int gl = (width - xSize)/2;
+        int gt = (height - ySize)/2;
+        int relX = mx - gl;
+        int relY = my - gt;
+        int local = getHoverLocalIndex(relX, relY);
+
+        if (local >= 0 && button == 0) {
+            int index = currentPage * cap + local;
+
+            if (index < entries.size()) {
+                SystemShopClientCatalog.Entry e = entries.get(index);
+                Item item = Item.itemsList[e.itemID];
+                int stackLimit = item != null ? item.getItemStackLimit() : 64;
+                int count = shift ? stackLimit : 1;
+
+                if (!alt) {
+                    ShopNet.sendPurchaseRequest(e.itemID, e.meta, count);
+                }
+                return;
+            }
+        }
         super.mouseClicked(mx, my, button);
+    }
+
+    private boolean isEquipment(Item item) {
+        return item
+                instanceof ItemArmor
+                || item instanceof ItemSword
+                || item instanceof ToolItem
+                || item instanceof ItemTool
+                || item instanceof ItemBow
+                || item instanceof ItemHoe
+                || item instanceof ItemFishingRod
+                || item instanceof ItemShears;
     }
 
     @Override
     public void handleMouseInput() {
         super.handleMouseInput();
-        int wheel = org.lwjgl.input.Mouse.getDWheel();
+        int wheel = Mouse.getDWheel();
         if (wheel != 0) {
             if (wheel > 0 && currentPage > 0) {
                 currentPage--;
