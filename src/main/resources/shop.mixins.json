@@ -5,6 +5,7 @@
   "compatibilityLevel": "JAVA_17",
   "mixins": [
     "world.EntityPlayerMixin",
+    "world.ItemMonsterPlacerMixin",
     "world.MinecraftServerMixin",
     "world.WorldServerMixin"
   ],

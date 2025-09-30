@@ -100,6 +100,12 @@ public class ShopNetServer {
         if (MoneyManager.getBalanceTenths(player) < cost) { sendResult(player, "shop.not_enough_money"); return; }
 
         ItemStack purchase = new ItemStack(si.itemStack.getItem(), count, si.damage);
+
+        if (itemID == 383 && (meta == 90 || meta == 91 || meta == 92 || meta == 100 || meta == 95)) {
+            if (purchase.stackTagCompound == null) purchase.stackTagCompound = new NBTTagCompound();
+            purchase.stackTagCompound.setBoolean("ShopBaby", true);
+        }
+
         if (!canFit(player, purchase)) {
             sendResult(player, "shop.inventory.full");
             return;
