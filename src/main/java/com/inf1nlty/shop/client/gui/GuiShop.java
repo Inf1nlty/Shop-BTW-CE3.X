@@ -1,6 +1,6 @@
 package com.inf1nlty.shop.client.gui;
 
-import btw.item.items.ToolItem;
+import api.item.items.ToolItem;
 import com.inf1nlty.shop.client.state.ShopClientData;
 import com.inf1nlty.shop.client.state.SystemShopClientCatalog;
 import com.inf1nlty.shop.inventory.ContainerShopPlayer;

@@ -1,7 +1,7 @@
 package btw.community.shop;
 
-import btw.AddonHandler;
-import btw.BTWAddon;
+import api.AddonHandler;
+import api.BTWAddon;
 import com.inf1nlty.shop.ShopConfig;
 import com.inf1nlty.shop.commands.MoneyCommand;
 import com.inf1nlty.shop.commands.ShopCommand;

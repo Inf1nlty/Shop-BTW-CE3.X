@@ -1,6 +1,6 @@
 package com.inf1nlty.shop.network;
 
-import btw.BTWAddon;
+import api.BTWAddon;
 import com.inf1nlty.shop.client.gui.GuiShop;
 import com.inf1nlty.shop.client.state.ShopClientData;
 import com.inf1nlty.shop.client.state.SystemShopClientCatalog;
